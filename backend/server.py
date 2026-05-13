@@ -1,88 +1,488 @@
-from fastapi import FastAPI, APIRouter
-from dotenv import load_dotenv
-from starlette.middleware.cors import CORSMiddleware
-from motor.motor_asyncio import AsyncIOMotorClient
 import os
-import logging
-from pathlib import Path
-from pydantic import BaseModel, Field, ConfigDict
-from typing import List
 import uuid
-from datetime import datetime, timezone
+import logging
+from datetime import datetime, timezone, date, timedelta
+from pathlib import Path
+from typing import List, Optional
 
+from fastapi import FastAPI, APIRouter, Depends, HTTPException, status
+from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
+from motor.motor_asyncio import AsyncIOMotorClient
+from pydantic import BaseModel, Field, EmailStr, ConfigDict
 
+# Load env BEFORE importing modules that capture env vars at import time
 ROOT_DIR = Path(__file__).parent
-load_dotenv(ROOT_DIR / '.env')
+load_dotenv(ROOT_DIR / ".env")
 
-# MongoDB connection
-mongo_url = os.environ['MONGO_URL']
+from auth import (  # noqa: E402
+    hash_password,
+    verify_password,
+    create_token,
+    get_current_user,
+)
+from llm_service import analyze_food_label, analyze_blood_test  # noqa: E402
+from glossary_data import GLOSSARY  # noqa: E402
+
+mongo_url = os.environ["MONGO_URL"]
 client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
+db = client[os.environ["DB_NAME"]]
 
-# Create the main app without a prefix
-app = FastAPI()
+app = FastAPI(title="Anchor Recovery API")
+api = APIRouter(prefix="/api")
 
-# Create a router with the /api prefix
-api_router = APIRouter(prefix="/api")
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+logger = logging.getLogger(__name__)
 
 
-# Define Models
-class StatusCheck(BaseModel):
-    model_config = ConfigDict(extra="ignore")  # Ignore MongoDB's _id field
-    
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    client_name: str
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+# -------- Models --------
 
-class StatusCheckCreate(BaseModel):
-    client_name: str
+class RegisterIn(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=6)
+    name: str = Field(min_length=1)
 
-# Add your routes to the router instead of directly to app
-@api_router.get("/")
+
+class LoginIn(BaseModel):
+    email: EmailStr
+    password: str
+
+
+class AuthOut(BaseModel):
+    token: str
+    user: dict
+
+
+class UserOut(BaseModel):
+    id: str
+    email: EmailStr
+    name: str
+    sobriety_start: Optional[str] = None
+    created_at: str
+
+
+class DiaryIn(BaseModel):
+    date: str  # ISO date (YYYY-MM-DD)
+    rating: int = Field(ge=1, le=10)
+    mood_tags: List[str] = []
+    notes: str = ""
+
+
+class DiaryOut(DiaryIn):
+    id: str
+    created_at: str
+
+
+class MealIn(BaseModel):
+    date: str
+    name: str
+    protein_g: float = 0
+    salt_g: float = 0
+    water_ml: float = 0
+    calories: float = 0
+    notes: str = ""
+
+
+class MealOut(MealIn):
+    id: str
+    created_at: str
+
+
+class WaterIn(BaseModel):
+    date: str
+    amount_ml: float
+
+
+class BloodTestMarker(BaseModel):
+    name: str
+    value: float
+    unit: str = ""
+    reference_range: str = ""
+
+
+class BloodTestIn(BaseModel):
+    date: str
+    lab: str = ""
+    markers: List[BloodTestMarker]
+    notes: str = ""
+
+
+class BloodTestOut(BloodTestIn):
+    id: str
+    created_at: str
+
+
+class GoalIn(BaseModel):
+    title: str
+    week_start: str  # ISO date Monday of week
+    completed: bool = False
+
+
+class GoalUpdate(BaseModel):
+    title: Optional[str] = None
+    completed: Optional[bool] = None
+
+
+class GoalOut(GoalIn):
+    id: str
+    created_at: str
+
+
+class SobrietyIn(BaseModel):
+    sobriety_start: str  # ISO date
+
+
+class FoodLabelIn(BaseModel):
+    image_base64: str
+
+
+class BloodExtractIn(BaseModel):
+    image_base64: str
+
+
+# -------- Helpers --------
+
+def now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def today_str() -> str:
+    return datetime.now(timezone.utc).date().isoformat()
+
+
+async def user_doc(user_id: str) -> dict:
+    doc = await db.users.find_one({"id": user_id}, {"_id": 0, "password_hash": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="User not found")
+    return doc
+
+
+# -------- Auth --------
+
+@api.post("/auth/register", response_model=AuthOut)
+async def register(payload: RegisterIn):
+    existing = await db.users.find_one({"email": payload.email.lower()}, {"_id": 0})
+    if existing:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    user_id = str(uuid.uuid4())
+    user = {
+        "id": user_id,
+        "email": payload.email.lower(),
+        "name": payload.name,
+        "password_hash": hash_password(payload.password),
+        "sobriety_start": today_str(),
+        "created_at": now_iso(),
+    }
+    await db.users.insert_one(user)
+    token = create_token(user_id, user["email"])
+    user.pop("password_hash", None)
+    user.pop("_id", None)
+    return {"token": token, "user": user}
+
+
+@api.post("/auth/login", response_model=AuthOut)
+async def login(payload: LoginIn):
+    user = await db.users.find_one({"email": payload.email.lower()})
+    if not user or not verify_password(payload.password, user.get("password_hash", "")):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    token = create_token(user["id"], user["email"])
+    user.pop("password_hash", None)
+    user.pop("_id", None)
+    return {"token": token, "user": user}
+
+
+@api.get("/auth/me", response_model=UserOut)
+async def me(current=Depends(get_current_user)):
+    return await user_doc(current["id"])
+
+
+# -------- Sobriety --------
+
+@api.get("/sobriety")
+async def get_sobriety(current=Depends(get_current_user)):
+    u = await user_doc(current["id"])
+    start = u.get("sobriety_start") or today_str()
+    days = (datetime.now(timezone.utc).date() - date.fromisoformat(start)).days
+    return {"sobriety_start": start, "days_sober": max(days, 0)}
+
+
+@api.patch("/sobriety")
+async def set_sobriety(payload: SobrietyIn, current=Depends(get_current_user)):
+    # validate
+    date.fromisoformat(payload.sobriety_start)
+    await db.users.update_one({"id": current["id"]}, {"$set": {"sobriety_start": payload.sobriety_start}})
+    days = (datetime.now(timezone.utc).date() - date.fromisoformat(payload.sobriety_start)).days
+    return {"sobriety_start": payload.sobriety_start, "days_sober": max(days, 0)}
+
+
+# -------- Diary --------
+
+@api.get("/diary", response_model=List[DiaryOut])
+async def list_diary(current=Depends(get_current_user)):
+    items = await db.diary.find({"user_id": current["id"]}, {"_id": 0, "user_id": 0}).sort("date", -1).to_list(500)
+    return items
+
+
+@api.post("/diary", response_model=DiaryOut)
+async def create_diary(payload: DiaryIn, current=Depends(get_current_user)):
+    entry = {
+        "id": str(uuid.uuid4()),
+        "user_id": current["id"],
+        "date": payload.date,
+        "rating": payload.rating,
+        "mood_tags": payload.mood_tags,
+        "notes": payload.notes,
+        "created_at": now_iso(),
+    }
+    await db.diary.insert_one(entry)
+    entry.pop("user_id", None)
+    entry.pop("_id", None)
+    return entry
+
+
+@api.delete("/diary/{entry_id}")
+async def delete_diary(entry_id: str, current=Depends(get_current_user)):
+    res = await db.diary.delete_one({"id": entry_id, "user_id": current["id"]})
+    if res.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Not found")
+    return {"ok": True}
+
+
+# -------- Meals / Diet --------
+
+@api.get("/meals", response_model=List[MealOut])
+async def list_meals(date_str: Optional[str] = None, current=Depends(get_current_user)):
+    q = {"user_id": current["id"]}
+    if date_str:
+        q["date"] = date_str
+    items = await db.meals.find(q, {"_id": 0, "user_id": 0}).sort("created_at", -1).to_list(500)
+    return items
+
+
+@api.post("/meals", response_model=MealOut)
+async def add_meal(payload: MealIn, current=Depends(get_current_user)):
+    entry = {
+        "id": str(uuid.uuid4()),
+        "user_id": current["id"],
+        **payload.model_dump(),
+        "created_at": now_iso(),
+    }
+    await db.meals.insert_one(entry)
+    entry.pop("user_id", None)
+    entry.pop("_id", None)
+    return entry
+
+
+@api.delete("/meals/{meal_id}")
+async def delete_meal(meal_id: str, current=Depends(get_current_user)):
+    res = await db.meals.delete_one({"id": meal_id, "user_id": current["id"]})
+    if res.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Not found")
+    return {"ok": True}
+
+
+@api.get("/meals/totals")
+async def meals_totals(date_str: Optional[str] = None, current=Depends(get_current_user)):
+    d = date_str or today_str()
+    items = await db.meals.find({"user_id": current["id"], "date": d}, {"_id": 0}).to_list(500)
+    totals = {"protein_g": 0.0, "salt_g": 0.0, "water_ml": 0.0, "calories": 0.0}
+    for it in items:
+        totals["protein_g"] += float(it.get("protein_g") or 0)
+        totals["salt_g"] += float(it.get("salt_g") or 0)
+        totals["water_ml"] += float(it.get("water_ml") or 0)
+        totals["calories"] += float(it.get("calories") or 0)
+    return {"date": d, "totals": totals, "count": len(items)}
+
+
+@api.post("/water")
+async def quick_water(payload: WaterIn, current=Depends(get_current_user)):
+    entry = {
+        "id": str(uuid.uuid4()),
+        "user_id": current["id"],
+        "date": payload.date,
+        "name": "Water",
+        "protein_g": 0,
+        "salt_g": 0,
+        "water_ml": payload.amount_ml,
+        "calories": 0,
+        "notes": "",
+        "created_at": now_iso(),
+    }
+    await db.meals.insert_one(entry)
+    entry.pop("user_id", None)
+    entry.pop("_id", None)
+    return entry
+
+
+# -------- Blood Tests --------
+
+@api.get("/blood-tests", response_model=List[BloodTestOut])
+async def list_blood_tests(current=Depends(get_current_user)):
+    items = await db.blood_tests.find({"user_id": current["id"]}, {"_id": 0, "user_id": 0}).sort("date", -1).to_list(500)
+    return items
+
+
+@api.post("/blood-tests", response_model=BloodTestOut)
+async def add_blood_test(payload: BloodTestIn, current=Depends(get_current_user)):
+    entry = {
+        "id": str(uuid.uuid4()),
+        "user_id": current["id"],
+        "date": payload.date,
+        "lab": payload.lab,
+        "markers": [m.model_dump() for m in payload.markers],
+        "notes": payload.notes,
+        "created_at": now_iso(),
+    }
+    await db.blood_tests.insert_one(entry)
+    entry.pop("user_id", None)
+    entry.pop("_id", None)
+    return entry
+
+
+@api.delete("/blood-tests/{test_id}")
+async def delete_blood_test(test_id: str, current=Depends(get_current_user)):
+    res = await db.blood_tests.delete_one({"id": test_id, "user_id": current["id"]})
+    if res.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Not found")
+    return {"ok": True}
+
+
+@api.post("/blood-tests/extract")
+async def extract_blood_test(payload: BloodExtractIn, current=Depends(get_current_user)):
+    try:
+        result = await analyze_blood_test(payload.image_base64)
+        return result
+    except Exception as e:
+        logger.exception("blood test extract failed")
+        raise HTTPException(status_code=500, detail=f"Extraction failed: {str(e)}")
+
+
+# -------- Food Label --------
+
+@api.post("/food-label/analyze")
+async def analyze_food(payload: FoodLabelIn, current=Depends(get_current_user)):
+    try:
+        result = await analyze_food_label(payload.image_base64)
+        return result
+    except Exception as e:
+        logger.exception("food label analyze failed")
+        raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+
+
+# -------- Goals --------
+
+@api.get("/goals", response_model=List[GoalOut])
+async def list_goals(week_start: Optional[str] = None, current=Depends(get_current_user)):
+    q = {"user_id": current["id"]}
+    if week_start:
+        q["week_start"] = week_start
+    items = await db.goals.find(q, {"_id": 0, "user_id": 0}).sort("created_at", 1).to_list(500)
+    return items
+
+
+@api.post("/goals", response_model=GoalOut)
+async def add_goal(payload: GoalIn, current=Depends(get_current_user)):
+    entry = {
+        "id": str(uuid.uuid4()),
+        "user_id": current["id"],
+        **payload.model_dump(),
+        "created_at": now_iso(),
+    }
+    await db.goals.insert_one(entry)
+    entry.pop("user_id", None)
+    entry.pop("_id", None)
+    return entry
+
+
+@api.patch("/goals/{goal_id}", response_model=GoalOut)
+async def update_goal(goal_id: str, payload: GoalUpdate, current=Depends(get_current_user)):
+    update = {k: v for k, v in payload.model_dump().items() if v is not None}
+    if not update:
+        raise HTTPException(status_code=400, detail="No changes")
+    res = await db.goals.update_one({"id": goal_id, "user_id": current["id"]}, {"$set": update})
+    if res.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Not found")
+    doc = await db.goals.find_one({"id": goal_id}, {"_id": 0, "user_id": 0})
+    return doc
+
+
+@api.delete("/goals/{goal_id}")
+async def delete_goal(goal_id: str, current=Depends(get_current_user)):
+    res = await db.goals.delete_one({"id": goal_id, "user_id": current["id"]})
+    if res.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Not found")
+    return {"ok": True}
+
+
+# -------- Glossary --------
+
+@api.get("/glossary")
+async def glossary():
+    return {"items": GLOSSARY}
+
+
+# -------- Dashboard --------
+
+@api.get("/dashboard")
+async def dashboard(current=Depends(get_current_user)):
+    u = await user_doc(current["id"])
+    start = u.get("sobriety_start") or today_str()
+    days = (datetime.now(timezone.utc).date() - date.fromisoformat(start)).days
+    d = today_str()
+
+    meals = await db.meals.find({"user_id": current["id"], "date": d}, {"_id": 0}).to_list(500)
+    totals = {"protein_g": 0.0, "salt_g": 0.0, "water_ml": 0.0, "calories": 0.0}
+    for it in meals:
+        totals["protein_g"] += float(it.get("protein_g") or 0)
+        totals["salt_g"] += float(it.get("salt_g") or 0)
+        totals["water_ml"] += float(it.get("water_ml") or 0)
+        totals["calories"] += float(it.get("calories") or 0)
+
+    today_entry = await db.diary.find_one({"user_id": current["id"], "date": d}, {"_id": 0, "user_id": 0})
+
+    # weekly diary average (last 7 days)
+    week_ago = (datetime.now(timezone.utc).date() - timedelta(days=7)).isoformat()
+    week_entries = await db.diary.find(
+        {"user_id": current["id"], "date": {"$gte": week_ago}}, {"_id": 0, "rating": 1, "date": 1}
+    ).to_list(50)
+    weekly_avg = round(sum(e["rating"] for e in week_entries) / len(week_entries), 1) if week_entries else None
+
+    # this week's goals
+    today_dt = datetime.now(timezone.utc).date()
+    monday = today_dt - timedelta(days=today_dt.weekday())
+    goals = await db.goals.find(
+        {"user_id": current["id"], "week_start": monday.isoformat()}, {"_id": 0, "user_id": 0}
+    ).to_list(100)
+
+    return {
+        "sobriety": {"sobriety_start": start, "days_sober": max(days, 0)},
+        "today": {
+            "date": d,
+            "totals": totals,
+            "diary": today_entry,
+            "targets": {"protein_g_min": 140, "salt_g_max": 2, "water_ml_max": 1500},
+        },
+        "weekly_rating_avg": weekly_avg,
+        "goals": goals,
+        "week_start": monday.isoformat(),
+    }
+
+
+@api.get("/")
 async def root():
-    return {"message": "Hello World"}
+    return {"message": "Anchor Recovery API", "ok": True}
 
-@api_router.post("/status", response_model=StatusCheck)
-async def create_status_check(input: StatusCheckCreate):
-    status_dict = input.model_dump()
-    status_obj = StatusCheck(**status_dict)
-    
-    # Convert to dict and serialize datetime to ISO string for MongoDB
-    doc = status_obj.model_dump()
-    doc['timestamp'] = doc['timestamp'].isoformat()
-    
-    _ = await db.status_checks.insert_one(doc)
-    return status_obj
 
-@api_router.get("/status", response_model=List[StatusCheck])
-async def get_status_checks():
-    # Exclude MongoDB's _id field from the query results
-    status_checks = await db.status_checks.find({}, {"_id": 0}).to_list(1000)
-    
-    # Convert ISO string timestamps back to datetime objects
-    for check in status_checks:
-        if isinstance(check['timestamp'], str):
-            check['timestamp'] = datetime.fromisoformat(check['timestamp'])
-    
-    return status_checks
-
-# Include the router in the main app
-app.include_router(api_router)
+app.include_router(api)
 
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
+    allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","),
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
 
 @app.on_event("shutdown")
 async def shutdown_db_client():

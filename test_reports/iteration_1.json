@@ -1,0 +1,41 @@
+{
+  "summary": "Backend regression suite for Anchor Recovery app: 19 pytest tests covering auth, sobriety, diary, meals/water, blood tests (incl. AI extraction), food label AI analysis, goals, glossary and dashboard. All 19 tests PASS after fixing one load-order bug in server.py.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/api/blood-tests/extract & /api/food-label/analyze", "issue": "Intermittent 500s with 'litellm.BadRequestError: Budget has been exceeded! Max budget: 0.001'. This is an EMERGENT_LLM_KEY per-session/period budget cap, not an app bug. Endpoints themselves verified working multiple times. Recommend bumping LLM key budget or batching/caching results."}
+    ]
+  },
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_anchor_api.py",
+    "/app/backend/tests/conftest.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "(Optional) Make llm_service.py read EMERGENT_LLM_KEY lazily inside each function so future module-import ordering can't break it again.",
+    "Consider returning 502/503 (upstream) rather than 500 when LLM provider returns auth/budget errors so clients can distinguish transient from server bugs.",
+    "Drop the large 'raw_response' string from food-label/blood-extract responses (or gate behind ?debug=1) to reduce payload size."
+  ],
+  "critical_code_review_comments": [
+    "BUG FIXED in /app/backend/server.py: load_dotenv() was called AFTER 'from llm_service import ...'. Because llm_service.py captures EMERGENT_LLM_KEY at module load time (module-level constant), the key was always empty, causing AuthenticationError on every AI call. Moved load_dotenv() above the imports of auth/llm_service/glossary_data. Verified via /api/food-label/analyze and /api/blood-tests/extract now returning 200.",
+    "auth.py uses HTTPBearer(auto_error=False) and raises 401 manually – good. JWT secret falls back to 'dev-secret' if env missing; consider failing fast.",
+    "server.py is 480+ lines mixing all routers – consider splitting per resource (auth/diary/meals/goals/blood/llm).",
+    "Glossary endpoint returns 31 items – meets >=30 requirement. Good.",
+    "Dashboard correctly excludes _id and scopes data to user_id; targets match spec (140/2/1500). Good.",
+    "Cross-user isolation verified for diary; same pattern is used for meals/goals/blood-tests (filter on user_id). Good.",
+    "Pydantic rating validator (1-10) returns 422 – good."
+  ],
+  "updated_files": [
+    "/app/backend/server.py (moved load_dotenv before module imports)",
+    "/app/backend/tests/conftest.py (new)",
+    "/app/backend/tests/test_anchor_api.py (new)"
+  ],
+  "success_rate": {"backend": "100% (19/19)", "frontend": "not tested (backend-only request)"},
+  "test_credentials": "tester@anchor.app / Anchor!2026 (created via /api/auth/register if absent)",
+  "seed_data_creation": "Each test creates and cleans up its own TEST_-prefixed records. A second user is auto-registered each session for isolation checks.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Backend stack is solid. Tests live in /app/backend/tests/. AI endpoints can intermittently fail with 'Budget has been exceeded' if EMERGENT_LLM_KEY budget is exhausted – retry after a while or expect 500. Salt is in grams (salt_g), sodium in mg. Targets confirmed protein>=140g, salt<=2g, water<=1500ml in dashboard.targets.",
+  "rca_of_the_issue": "Root cause of LLM endpoints failing: import-order bug. /app/backend/server.py imported llm_service before calling load_dotenv(); llm_service.py reads EMERGENT_LLM_KEY at module import time. Result: emergentintegrations LlmChat got empty api_key → litellm threw AuthenticationError('OPENAI_API_KEY ...'). Fix: moved load_dotenv(ROOT_DIR/'.env') above the from-imports of auth/llm_service/glossary_data in server.py. Reproduction: POST /api/food-label/analyze or /api/blood-tests/extract with any base64 image → 500. After fix: both return 200 with structured JSON."
+}
