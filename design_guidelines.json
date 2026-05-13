@@ -1,0 +1,112 @@
+{
+  "theme": "LIGHT",
+  "archetype": "1_ORGANIC_AND_EARTHY",
+  "design_philosophy": {
+    "vibe": "Warm, supportive, non-judgmental, grounded. The app must feel like a sanctuary, not a hospital.",
+    "anti_patterns": [
+      "Clinical aesthetics",
+      "Purple/teal tech gradients",
+      "Sterile white backgrounds",
+      "Center-everything alignment"
+    ],
+    "key_traits": [
+      "Generous spacing (p-8, p-12) to give data breathing room",
+      "Earthy, matte color palette",
+      "Asymmetric bento layouts for data",
+      "Optical clarity with subtle borders rather than heavy drop shadows"
+    ]
+  },
+  "typography": {
+    "headings": {
+      "font_family": "Outfit, sans-serif",
+      "weights": ["light", "medium", "bold"],
+      "tracking": "tracking-tight",
+      "usage": "Use for all large text, streak counters, and dashboard section titles. Do not exceed text-6xl for hero."
+    },
+    "body": {
+      "font_family": "Work Sans, sans-serif",
+      "weights": ["regular", "medium"],
+      "usage": "Use for diary entries, glossary text, and dietary metrics."
+    },
+    "labels": {
+      "font_family": "Outfit, sans-serif",
+      "styling": "uppercase text-xs tracking-[0.2em] text-muted-foreground font-medium"
+    }
+  },
+  "colors": {
+    "description": "Earthy tones. Warm sand, terracotta, sage, deep forest, cream.",
+    "tailwind_css_variables": {
+      "--background": "40 33% 98%",
+      "--foreground": "127 9% 19%",
+      "--card": "42 27% 94%",
+      "--card-foreground": "127 9% 19%",
+      "--popover": "40 33% 98%",
+      "--popover-foreground": "127 9% 19%",
+      "--primary": "136 18% 35%",
+      "--primary-foreground": "0 0% 100%",
+      "--secondary": "42 27% 90%",
+      "--secondary-foreground": "127 9% 19%",
+      "--muted": "42 27% 90%",
+      "--muted-foreground": "127 4% 36%",
+      "--accent": "13 54% 55%",
+      "--accent-foreground": "0 0% 100%",
+      "--destructive": "0 84% 60%",
+      "--destructive-foreground": "0 0% 100%",
+      "--border": "42 20% 88%",
+      "--input": "42 20% 88%",
+      "--ring": "136 18% 35%",
+      "--radius": "1rem"
+    },
+    "specifics": {
+      "terracotta": "#C86B52",
+      "sky": "#6B8E9B",
+      "ochre": "#D2A24C"
+    }
+  },
+  "layout_and_spacing": {
+    "grid_system": "MODE_B_CONTROL_ROOM adapted for mobile-first",
+    "dashboard_grid": "grid-cols-1 md:grid-cols-4 gap-6",
+    "spacing_scale": "Use p-6 to p-8 inside cards. Add generous breathing room between sections (py-12 or py-16).",
+    "surface_strategy": "THE_TACTILE_VARIANT",
+    "card_style": "Flat background (bg-card), 1px subtle border (border-border), no harsh drop shadows. Use rounded-2xl or rounded-3xl for a friendly, approachable feel."
+  },
+  "components": {
+    "buttons": "rounded-full px-8 py-6 text-lg font-medium transition-transform hover:-translate-y-1 active:translate-y-0 shadow-sm",
+    "inputs": "bg-transparent border-b-2 border-x-0 border-t-0 border-border rounded-none px-0 focus-visible:ring-0 focus-visible:border-primary transition-colors h-12",
+    "progress_rings": "Use SVG circles. protein: stroke-primary, salt: stroke-terracotta, water: stroke-sky. Round caps.",
+    "sliders": "Use Shadcn Slider. Customize with thick tracks and primary color thumb. Crucial for mood rating (1-10).",
+    "cards": "Neumorphic soft clay look. Avoid stark white boxes. Use bg-[#F4F1EA]."
+  },
+  "motion_and_interaction": {
+    "hover_states": "Slight lift (-translate-y-1) and darken border color.",
+    "page_transitions": "Fade in with a slight upward translation.",
+    "progress_bars": "Animate width/stroke-dashoffset slowly (duration-1000 ease-out) to emphasize steady progress."
+  },
+  "media_and_images": {
+    "hero_background": {
+      "url": "https://images.unsplash.com/photo-1512230254992-9788b9bbc69c?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NjZ8MHwxfHNlYXJjaHwzfHxzdW5yaXNlJTIwbW91bnRhaW5zJTIwY2FsbXxlbnwwfHx8fDE3Nzg2NDczMzJ8MA&ixlib=rb-4.1.0&q=85",
+      "description": "Calm mountain sunrise over water. Use for the login/welcome page. Apply bg-black/20 to bg-black/30 overlay for text contrast."
+    },
+    "food_label_placeholder": {
+      "url": "https://images.unsplash.com/photo-1759191639442-be1b99d1eb57?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzh8MHwxfHNlYXJjaHwxfHxoZWFsdGh5JTIwZm9vZCUyMGluZ3JlZGllbnRzJTIwd2FybSUyMGxpZ2h0fGVufDB8fHx8MTc3ODY0NzMzMnww&ixlib=rb-4.1.0&q=85",
+      "description": "Healthy warm food ingredients. Use as an empty state or placeholder in the Food Label Reader section."
+    }
+  },
+  "iconography": {
+    "library": "lucide-react",
+    "style": "stroke-[1.5] for a lighter, more organic feel. Avoid heavy, chunky icons."
+  },
+  "testing": {
+    "requirement": "All interactive elements MUST include data-testid attribute in kebab-case format."
+  },
+  "page_specific_instructions": {
+    "auth_landing": "Asymmetric split screen on desktop. Calm nature image on one side with a motivational quote. Warm login/register form on the other with generous padding.",
+    "dashboard": "Bento grid layout. Hero card: Sobriety streak counter spanning full width or 2 columns with large typography (text-5xl). 3 smaller cards for diet rings (Protein min 140mg, Salt max 2mg, Water max 1.5L). A wide card for today's mood.",
+    "daily_diary": "Vertical timeline layout. Each entry is a soft tactile card. Group by date. Include 1-10 mood rating and tags (rounded-full bg-primary/10 text-primary).",
+    "diet_tracker": "Visual focus on max/min limits. Protein is a 'fill up' progress bar. Salt and Water are 'don't overflow' bars. Emphasize earthy colors.",
+    "blood_tests": "Manual entry form + Recharts. Line charts with smooth curves (type='monotone'). Tooltips must have dark earthy background. Plot markers like ALT, AST, GGT, bilirubin.",
+    "food_label_reader": "Photo upload UI with dashed border (border-primary). Once uploaded, show extracted nutrition data in a neat table before confirming.",
+    "weekly_goals": "List view with oversized checkboxes. Strikethrough text when completed with a subtle color fade.",
+    "glossary": "List view with alphabetical sticky headers. Search bar at top. High contrast text for easy reading of medical/recovery terms."
+  }
+}
