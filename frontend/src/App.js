@@ -17,6 +17,8 @@ import Profile from "./pages/Profile";
 import Medications from "./pages/Medications";
 import Crisis from "./pages/Crisis";
 import Reports from "./pages/Reports";
+import ShareLinks from "./pages/ShareLinks";
+import SharedView from "./pages/SharedView";
 
 const Private = ({ children }) => {
     const { user, loading } = useAuth();
@@ -39,6 +41,7 @@ function App() {
                 <BrowserRouter>
                     <Routes>
                         <Route path="/" element={<Public><Landing /></Public>} />
+                        <Route path="/share/:token" element={<SharedView />} />
                         <Route path="/app" element={<Private><AppShell /></Private>}>
                             <Route index element={<Dashboard />} />
                             <Route path="diary" element={<Diary />} />
@@ -48,6 +51,7 @@ function App() {
                             <Route path="goals" element={<Goals />} />
                             <Route path="meds" element={<Medications />} />
                             <Route path="reports" element={<Reports />} />
+                            <Route path="share" element={<ShareLinks />} />
                             <Route path="glossary" element={<Glossary />} />
                             <Route path="crisis" element={<Crisis />} />
                             <Route path="profile" element={<Profile />} />

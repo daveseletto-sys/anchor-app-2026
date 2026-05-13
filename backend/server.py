@@ -146,6 +146,20 @@ class BloodExtractIn(BaseModel):
     image_base64: str
 
 
+class ShareLinkCreate(BaseModel):
+    expires_in_days: int = Field(default=7, ge=1, le=90)
+    scope: str = Field(default="summary")  # "summary" | "full"
+
+
+class ShareLinkOut(BaseModel):
+    id: str
+    token: str
+    scope: str
+    expires_at: str
+    revoked: bool
+    created_at: str
+
+
 class ProfileUpdate(BaseModel):
     name: Optional[str] = None
     sobriety_start: Optional[str] = None
@@ -874,6 +888,191 @@ async def reports_pdf(
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+# -------- Correlations (mood vs diet) --------
+
+@api.get("/correlations")
+async def correlations(days: int = 30, current=Depends(get_current_user)):
+    if days < 1 or days > 180:
+        raise HTTPException(status_code=422, detail="days must be 1..180")
+    today_dt = datetime.now(timezone.utc).date()
+    start_dt = today_dt - timedelta(days=days - 1)
+    start_iso = start_dt.isoformat()
+
+    # Diary by date
+    diary_rows = await db.diary.find(
+        {"user_id": current["id"], "date": {"$gte": start_iso}},
+        {"_id": 0, "user_id": 0},
+    ).to_list(2000)
+    diary_by_date = {d["date"]: d for d in diary_rows}
+
+    # Diet totals by date
+    meals = await db.meals.find(
+        {"user_id": current["id"], "date": {"$gte": start_iso}}, {"_id": 0}
+    ).to_list(5000)
+    diet_by_date = {}
+    for m in meals:
+        d = m.get("date")
+        diet_by_date.setdefault(d, {"protein_g": 0.0, "salt_g": 0.0, "water_ml": 0.0, "calories": 0.0})
+        diet_by_date[d]["protein_g"] += float(m.get("protein_g") or 0)
+        diet_by_date[d]["salt_g"] += float(m.get("salt_g") or 0)
+        diet_by_date[d]["water_ml"] += float(m.get("water_ml") or 0)
+        diet_by_date[d]["calories"] += float(m.get("calories") or 0)
+
+    # Build series for every day in range
+    series = []
+    for i in range(days):
+        d = (start_dt + timedelta(days=i)).isoformat()
+        diary = diary_by_date.get(d)
+        diet = diet_by_date.get(d, {"protein_g": 0.0, "salt_g": 0.0, "water_ml": 0.0, "calories": 0.0})
+        series.append({
+            "date": d,
+            "rating": diary.get("rating") if diary else None,
+            "protein_g": round(diet["protein_g"], 1),
+            "salt_g": round(diet["salt_g"], 2),
+            "water_ml": round(diet["water_ml"], 0),
+        })
+
+    # Pearson correlation between rating and each diet metric (only days with both)
+    def corr(xs, ys):
+        n = len(xs)
+        if n < 3:
+            return None
+        mx = sum(xs) / n
+        my = sum(ys) / n
+        num = sum((x - mx) * (y - my) for x, y in zip(xs, ys))
+        dx = sum((x - mx) ** 2 for x in xs) ** 0.5
+        dy = sum((y - my) ** 2 for y in ys) ** 0.5
+        if dx == 0 or dy == 0:
+            return None
+        return round(num / (dx * dy), 2)
+
+    paired = [(s["rating"], s["protein_g"], s["salt_g"], s["water_ml"]) for s in series if s["rating"] is not None]
+    correlations_out = {
+        "protein": corr([p[0] for p in paired], [p[1] for p in paired]) if paired else None,
+        "salt": corr([p[0] for p in paired], [p[2] for p in paired]) if paired else None,
+        "water": corr([p[0] for p in paired], [p[3] for p in paired]) if paired else None,
+        "n": len(paired),
+    }
+
+    return {"days": days, "series": series, "correlations": correlations_out}
+
+
+# -------- Share Links (sponsor read-only) --------
+
+import secrets  # noqa: E402
+
+@api.post("/share-links", response_model=ShareLinkOut)
+async def create_share_link(payload: ShareLinkCreate, current=Depends(get_current_user)):
+    if payload.scope not in ("summary", "full"):
+        raise HTTPException(status_code=422, detail="scope must be 'summary' or 'full'")
+    token = secrets.token_urlsafe(24)
+    expires = datetime.now(timezone.utc) + timedelta(days=payload.expires_in_days)
+    doc = {
+        "id": str(uuid.uuid4()),
+        "user_id": current["id"],
+        "token": token,
+        "scope": payload.scope,
+        "expires_at": expires.isoformat(),
+        "revoked": False,
+        "created_at": now_iso(),
+    }
+    await db.share_links.insert_one(doc)
+    doc.pop("user_id", None)
+    doc.pop("_id", None)
+    return doc
+
+
+@api.get("/share-links", response_model=List[ShareLinkOut])
+async def list_share_links(current=Depends(get_current_user)):
+    items = await db.share_links.find(
+        {"user_id": current["id"]}, {"_id": 0, "user_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    return items
+
+
+@api.delete("/share-links/{link_id}")
+async def revoke_share_link(link_id: str, current=Depends(get_current_user)):
+    res = await db.share_links.update_one(
+        {"id": link_id, "user_id": current["id"]},
+        {"$set": {"revoked": True}},
+    )
+    if res.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Not found")
+    return {"ok": True}
+
+
+@api.get("/shared/{token}")
+async def view_shared(token: str):
+    link = await db.share_links.find_one({"token": token}, {"_id": 0})
+    if not link:
+        raise HTTPException(status_code=404, detail="Link not found")
+    if link.get("revoked"):
+        raise HTTPException(status_code=410, detail="Link revoked")
+    try:
+        exp = datetime.fromisoformat(link["expires_at"])
+    except Exception:
+        raise HTTPException(status_code=410, detail="Invalid link")
+    if datetime.now(timezone.utc) > exp:
+        raise HTTPException(status_code=410, detail="Link expired")
+
+    user = await db.users.find_one({"id": link["user_id"]}, {"_id": 0, "password_hash": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="Owner not found")
+
+    today_dt = datetime.now(timezone.utc).date()
+    sob_start = user.get("sobriety_start") or today_dt.isoformat()
+    days_sober = max((today_dt - date.fromisoformat(sob_start)).days, 0)
+
+    # Last 7 days summary
+    week_ago = (today_dt - timedelta(days=6)).isoformat()
+    meals = await db.meals.find(
+        {"user_id": link["user_id"], "date": {"$gte": week_ago}}, {"_id": 0}
+    ).to_list(2000)
+    by_day = {}
+    for m in meals:
+        d = m.get("date")
+        by_day.setdefault(d, {"protein_g": 0.0, "salt_g": 0.0, "water_ml": 0.0})
+        by_day[d]["protein_g"] += float(m.get("protein_g") or 0)
+        by_day[d]["salt_g"] += float(m.get("salt_g") or 0)
+        by_day[d]["water_ml"] += float(m.get("water_ml") or 0)
+    days_logged = len(by_day)
+    diet_summary = {
+        "days_logged": days_logged,
+        "avg_protein_g": round(sum(d["protein_g"] for d in by_day.values()) / max(days_logged, 1), 1),
+        "avg_salt_g": round(sum(d["salt_g"] for d in by_day.values()) / max(days_logged, 1), 2),
+        "avg_water_ml": round(sum(d["water_ml"] for d in by_day.values()) / max(days_logged, 1), 0),
+        "targets": {"protein_g_min": 140, "salt_g_max": 2, "water_ml_max": 1500},
+    }
+
+    diary_rows = await db.diary.find(
+        {"user_id": link["user_id"], "date": {"$gte": week_ago}}, {"_id": 0, "user_id": 0}
+    ).sort("date", -1).to_list(20)
+    diary_avg = round(sum(e["rating"] for e in diary_rows) / len(diary_rows), 1) if diary_rows else None
+
+    today_mon = today_dt - timedelta(days=today_dt.weekday())
+    goals = await db.goals.find(
+        {"user_id": link["user_id"], "week_start": today_mon.isoformat()},
+        {"_id": 0, "user_id": 0},
+    ).to_list(50)
+
+    return {
+        "owner_name": user.get("name", ""),
+        "expires_at": link["expires_at"],
+        "scope": link.get("scope", "summary"),
+        "sobriety": {"days_sober": days_sober, "sobriety_start": sob_start},
+        "diet_summary": diet_summary,
+        "diary_avg_rating": diary_avg,
+        "goals": [{"title": g.get("title"), "completed": g.get("completed", False)} for g in goals],
+        "diary_entries": (
+            [
+                {"date": e.get("date"), "rating": e.get("rating"), "mood_tags": e.get("mood_tags", [])}
+                for e in diary_rows
+            ]
+            if link.get("scope") == "full" else []
+        ),
+    }
 
 
 app.include_router(api)

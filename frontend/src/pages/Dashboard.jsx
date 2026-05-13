@@ -3,6 +3,7 @@ import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import ProgressRing from "../components/ProgressRing";
 import WeeklyInsight from "../components/WeeklyInsight";
+import MoodDietChart from "../components/MoodDietChart";
 import { Link } from "react-router-dom";
 import { ArrowRight, Sparkles } from "lucide-react";
 
@@ -149,6 +150,11 @@ const Dashboard = () => {
             {/* Weekly insight */}
             <div className="mt-5">
                 <WeeklyInsight />
+            </div>
+
+            {/* Mood vs diet correlation */}
+            <div className="mt-5">
+                <MoodDietChart />
             </div>
         </div>
     );
