@@ -55,22 +55,33 @@
 - ✅ 43/43 backend tests passing
 
 ## Implemented (2026-02 / Iteration 4 — P3)
-- ✅ Mood-vs-diet correlation chart on Dashboard (Recharts ComposedChart, 30-day Pearson correlations)
-- ✅ Sponsor read-only share links with expiring tokens (revocable, scope summary/full)
-- ✅ Public `/share/{token}` route — no login required for viewer
+- ✅ Mood-vs-diet correlation chart on Dashboard
+- ✅ Sponsor read-only share links + public `/share/{token}` page
 - ✅ 63/63 backend tests passing
-- ✅ Moved `import secrets` to top of server.py
+
+## Implemented (2026-02 / Iteration 5 — P4)
+- ✅ Email PDF report to doctor (Resend integration, test sender)
+- ✅ Email weekly AI insight digest to user's own email
+- ✅ Personal Milestones page (replaces requested competitive leaderboard — concerns flagged and discussed; built safer alternative)
+- ✅ Anonymous community averages (5-user privacy threshold)
+- ✅ Resend test-mode error converted to friendly 400 with guidance
+- ✅ 76/76 backend tests passing (13 new + 63 regression)
+
+## Recovery Safety Decision (logged)
+Per user request "monthly competition page for best performers by stats", flagged with user that ranking/competition is contra-indicated in alcohol recovery research (AA/SMART explicitly avoid it). Built instead:
+- Personal Milestones (own records, no comparison)
+- Anonymous community averages (context, not ranking)
+User responded "recommended" implicitly accepting the safer alternative.
 
 ## Prioritized Backlog
-**P4 (next)**
-- Email reminders (Resend) — needs API key
-- "Email this report to my doctor" one-click flow
-- AI insights weekly email digest
-
-**P5 (later)**
+**P5 (next)**
+- Verify a custom domain for Resend so emails can go to any address (currently test-mode only — sender@onboarding.resend.dev)
+- Automatic Sunday email digest (needs scheduler — defer to production deployment)
 - Sora-2 / image-based shareable weekly recap
+
+**P6 (later)**
 - Mobile PWA install + push notifications
-- Split server.py into routers (auth, diary, share, etc.) for maintainability
+- Split server.py (now 1360 lines) into routers (auth, diary, meds, share, etc.)
 
 ## Next Action Items
 - Get user feedback on first build

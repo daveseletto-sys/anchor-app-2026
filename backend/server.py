@@ -1087,9 +1087,6 @@ async def view_shared(token: str):
     }
 
 
-app.include_router(api)
-
-
 # -------- Email: send report to doctor --------
 
 @api.post("/reports/email")
