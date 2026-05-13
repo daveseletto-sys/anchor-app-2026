@@ -552,6 +552,17 @@ async def root():
     return {"message": "Anchor Recovery API", "ok": True}
 
 
+@api.get("/version")
+async def version():
+    """Public version endpoint — mobile clients use this to check compatibility."""
+    return {
+        "api_version": "1.0.0",
+        "min_mobile_client_version": "1.0.0",
+        "name": "Anchor Recovery API",
+        "ok": True,
+    }
+
+
 # -------- Profile --------
 
 @api.patch("/users/me", response_model=UserOut)
