@@ -525,8 +525,10 @@ async def root():
 async def update_profile(payload: ProfileUpdate, current=Depends(get_current_user)):
     update = {k: v for k, v in payload.model_dump().items() if v is not None}
     if "sobriety_start" in update:
-        # validate ISO date
-        date.fromisoformat(update["sobriety_start"])
+        try:
+            date.fromisoformat(update["sobriety_start"])
+        except ValueError:
+            raise HTTPException(status_code=422, detail="sobriety_start must be ISO date YYYY-MM-DD")
     if not update:
         raise HTTPException(status_code=400, detail="No changes")
     await db.users.update_one({"id": current["id"]}, {"$set": update})

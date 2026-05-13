@@ -43,18 +43,27 @@
 - ✅ Recharts trends for blood markers
 - ✅ 19/19 backend pytest tests passing
 
-## Prioritized Backlog
-**P1**
-- Sora-2 / image-based weekly recap shareable
-- Reminder notifications (email via Resend) for daily check-in
-- AI weekly insights summary from diary + diet data
-- Editable user profile (name, sobriety start, height/weight)
+## Implemented (2026-02 / Iteration 2 — P1)
+- ✅ Editable profile: name, sobriety_start, height_cm, weight_kg + change-password
+- ✅ Medication tracker: CRUD + daily check-offs with upsert + cascade delete on logs
+- ✅ AI Weekly Insights via Claude Sonnet 4.5 — warm reflective summary of diary + diet + meds + goals + sobriety; cached per week
+- ✅ Sidebar nav adds Medications + Profile
+- ✅ Dashboard adds WeeklyInsight card
+- ✅ 30/30 backend tests passing (19 regression + 11 new)
+- ✅ Fix: PATCH /users/me invalid date now returns 422 (not 500)
 
-**P2**
-- Crisis / emergency contact button + helpline links (region-aware)
-- Sponsor share view (read-only weekly summary)
-- Export PDF report for clinician
-- Medication tracker (Naltrexone, thiamine etc.)
+## Prioritized Backlog
+**P1 (DONE)** ~~AI weekly insights, editable profile, medication tracker~~. Email reminders (Resend) deferred — needs API key.
+
+**P2 (next)**
+- Clinician-export PDF (week/month report)
+- Sponsor read-only view via expiring shareable token link
+- Crisis hotline integration (region-aware)
+
+**P3 (later)**
+- Email reminders (Resend) — needs key
+- Sora-2 / image-based shareable weekly recap
+- AI insights weekly email digest
 
 ## Next Action Items
 - Get user feedback on first build
