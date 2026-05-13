@@ -1114,10 +1114,11 @@ async def email_report(payload: ReportEmailIn, current=Depends(get_current_user)
     except Exception as e:
         logger.exception("send report email failed")
         msg = str(e)
-        if "only send testing emails" in msg.lower() or "verify a domain" in msg.lower():
+        low = msg.lower()
+        if "only send testing emails" in low or "verify a domain" in low or "is not verified" in low or "verify your domain" in low:
             raise HTTPException(
                 status_code=400,
-                detail="Resend is in test mode — emails can only go to the email tied to your Resend account. To send to your doctor (or any other address), verify a domain at resend.com/domains and update SENDER_EMAIL in /app/backend/.env.",
+                detail="Your sender domain isn't fully verified at Resend yet. Add the DNS records Resend gave you to your domain registrar, then click 'Verify DNS Records' in the Resend dashboard. Once all records show green, this will work.",
             )
         raise HTTPException(status_code=502, detail=f"Email send failed: {msg}")
 
@@ -1160,10 +1161,11 @@ async def email_weekly_digest(current=Depends(get_current_user)):
     except Exception as e:
         logger.exception("send digest email failed")
         msg = str(e)
-        if "only send testing emails" in msg.lower() or "verify a domain" in msg.lower():
+        low = msg.lower()
+        if "only send testing emails" in low or "verify a domain" in low or "is not verified" in low or "verify your domain" in low:
             raise HTTPException(
                 status_code=400,
-                detail="Resend is in test mode — your account email is not verified with Resend so we can't email this digest to you yet. Update your account email in Anchor to match your Resend account, or verify a domain at resend.com/domains.",
+                detail="Your sender domain isn't fully verified at Resend yet. Add the DNS records Resend gave you to your domain registrar, then click 'Verify DNS Records' in the Resend dashboard. Once all records show green, this will work.",
             )
         raise HTTPException(status_code=502, detail=f"Email send failed: {msg}")
 
