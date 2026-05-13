@@ -1,6 +1,7 @@
 import os
 import uuid
 import logging
+import secrets
 from datetime import datetime, timezone, date, timedelta
 from pathlib import Path
 from typing import List, Optional
@@ -960,8 +961,6 @@ async def correlations(days: int = 30, current=Depends(get_current_user)):
 
 
 # -------- Share Links (sponsor read-only) --------
-
-import secrets  # noqa: E402
 
 @api.post("/share-links", response_model=ShareLinkOut)
 async def create_share_link(payload: ShareLinkCreate, current=Depends(get_current_user)):

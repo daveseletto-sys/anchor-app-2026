@@ -50,24 +50,27 @@
 - ✅ 30/30 backend tests passing
 
 ## Implemented (2026-02 / Iteration 3 — P2)
-- ✅ Crisis hotlines: US (5 lines) + UK (6 lines); region-aware
-- ✅ Region selector in Profile (Both / US / UK)
-- ✅ Persistent "Need help now?" link in sidebar (accent color, always visible)
-- ✅ Clinician-export PDF reports (`reportlab`): period (week/month) × scope (clinical/full/personal)
-- ✅ Reports page with selectors + download flow
-- ✅ 43/43 backend tests passing (43 = 19 iter1 + 11 iter2 + 13 iter3)
-- ✅ Fix: region='' (Both) clear flow
+- ✅ Crisis hotlines + region-aware UI
+- ✅ Clinician PDF reports (period × scope)
+- ✅ 43/43 backend tests passing
+
+## Implemented (2026-02 / Iteration 4 — P3)
+- ✅ Mood-vs-diet correlation chart on Dashboard (Recharts ComposedChart, 30-day Pearson correlations)
+- ✅ Sponsor read-only share links with expiring tokens (revocable, scope summary/full)
+- ✅ Public `/share/{token}` route — no login required for viewer
+- ✅ 63/63 backend tests passing
+- ✅ Moved `import secrets` to top of server.py
 
 ## Prioritized Backlog
-**P3 (next)**
-- Sponsor read-only view via expiring shareable token link
-- Email reminders (Resend) — needs API key from user
-- Mood-vs-diet correlation chart
-
-**P4 (later)**
-- Sora-2 / image-based shareable weekly recap
+**P4 (next)**
+- Email reminders (Resend) — needs API key
+- "Email this report to my doctor" one-click flow
 - AI insights weekly email digest
+
+**P5 (later)**
+- Sora-2 / image-based shareable weekly recap
 - Mobile PWA install + push notifications
+- Split server.py into routers (auth, diary, share, etc.) for maintainability
 
 ## Next Action Items
 - Get user feedback on first build
