@@ -1,0 +1,83 @@
+HOTLINES = {
+    "US": [
+        {
+            "name": "988 Suicide & Crisis Lifeline",
+            "phone": "988",
+            "url": "https://988lifeline.org",
+            "description": "Free, confidential 24/7 support for people in distress, including crises related to substance use.",
+            "categories": ["crisis", "suicide"],
+        },
+        {
+            "name": "SAMHSA National Helpline",
+            "phone": "1-800-662-HELP (4357)",
+            "url": "https://www.samhsa.gov/find-help/national-helpline",
+            "description": "Free, confidential 24/7 treatment referral and information service for people facing mental health or substance use disorders.",
+            "categories": ["substance_use", "referral"],
+        },
+        {
+            "name": "Alcoholics Anonymous (US)",
+            "phone": "212-870-3400 (General Service Office)",
+            "url": "https://www.aa.org",
+            "description": "Find a local AA meeting near you, in person or online.",
+            "categories": ["peer_support", "meetings"],
+        },
+        {
+            "name": "SMART Recovery (US)",
+            "phone": "",
+            "url": "https://meetings.smartrecovery.org",
+            "description": "Science-based recovery meetings — online and in-person, free.",
+            "categories": ["peer_support", "meetings"],
+        },
+        {
+            "name": "Crisis Text Line",
+            "phone": "Text HOME to 741741",
+            "url": "https://www.crisistextline.org",
+            "description": "Free, 24/7 crisis support via text message.",
+            "categories": ["crisis", "text"],
+        },
+    ],
+    "UK": [
+        {
+            "name": "Samaritans",
+            "phone": "116 123",
+            "url": "https://www.samaritans.org",
+            "description": "Free, confidential support 24/7 — for anyone going through a difficult time. Call any time, day or night.",
+            "categories": ["crisis", "suicide"],
+        },
+        {
+            "name": "Drinkline",
+            "phone": "0300 123 1110",
+            "url": "https://www.drinkaware.co.uk/advice/alcohol-support-services",
+            "description": "Free, confidential helpline for anyone worried about their own or someone else's drinking. Weekdays 9am–8pm, weekends 11am–4pm.",
+            "categories": ["substance_use"],
+        },
+        {
+            "name": "Alcoholics Anonymous (UK)",
+            "phone": "0800 9177 650",
+            "url": "https://www.alcoholics-anonymous.org.uk",
+            "description": "Free national helpline + find AA meetings near you across the UK.",
+            "categories": ["peer_support", "meetings"],
+        },
+        {
+            "name": "We Are With You",
+            "phone": "",
+            "url": "https://www.wearewithyou.org.uk",
+            "description": "Free, confidential support for alcohol, drugs and mental health — webchat and local services across England and Scotland.",
+            "categories": ["substance_use", "referral"],
+        },
+        {
+            "name": "Shout (UK Crisis Text)",
+            "phone": "Text SHOUT to 85258",
+            "url": "https://giveusashout.org",
+            "description": "Free, confidential, 24/7 text support for anyone in crisis in the UK.",
+            "categories": ["crisis", "text"],
+        },
+        {
+            "name": "NHS 111",
+            "phone": "111",
+            "url": "https://111.nhs.uk",
+            "description": "Free 24/7 NHS service for urgent (non-emergency) medical help.",
+            "categories": ["medical"],
+        },
+    ],
+}

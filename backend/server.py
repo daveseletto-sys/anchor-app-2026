@@ -23,6 +23,9 @@ from auth import (  # noqa: E402
 )
 from llm_service import analyze_food_label, analyze_blood_test, generate_weekly_insight  # noqa: E402
 from glossary_data import GLOSSARY  # noqa: E402
+from hotlines_data import HOTLINES  # noqa: E402
+from pdf_report import build_report_pdf  # noqa: E402
+from fastapi.responses import Response  # noqa: E402
 
 mongo_url = os.environ["MONGO_URL"]
 client = AsyncIOMotorClient(mongo_url)
@@ -60,6 +63,7 @@ class UserOut(BaseModel):
     sobriety_start: Optional[str] = None
     height_cm: Optional[float] = None
     weight_kg: Optional[float] = None
+    region: Optional[str] = None  # "US", "UK", or None
     created_at: str
 
 
@@ -147,6 +151,7 @@ class ProfileUpdate(BaseModel):
     sobriety_start: Optional[str] = None
     height_cm: Optional[float] = None
     weight_kg: Optional[float] = None
+    region: Optional[str] = None  # "US" or "UK"
 
 
 class PasswordChange(BaseModel):
@@ -529,6 +534,8 @@ async def update_profile(payload: ProfileUpdate, current=Depends(get_current_use
             date.fromisoformat(update["sobriety_start"])
         except ValueError:
             raise HTTPException(status_code=422, detail="sobriety_start must be ISO date YYYY-MM-DD")
+    if "region" in update and update["region"] not in (None, "", "US", "UK"):
+        raise HTTPException(status_code=422, detail="region must be 'US', 'UK', or null")
     if not update:
         raise HTTPException(status_code=400, detail="No changes")
     await db.users.update_one({"id": current["id"]}, {"$set": update})
@@ -740,6 +747,133 @@ async def get_weekly_insight(current=Depends(get_current_user)):
     if not cached:
         return {"week_start": week_start, "text": None}
     return {"week_start": week_start, "text": cached.get("text", ""), "created_at": cached.get("created_at")}
+
+
+# -------- Crisis / Hotlines --------
+
+@api.get("/crisis")
+async def get_crisis_lines(current=Depends(get_current_user)):
+    user = await user_doc(current["id"])
+    region = user.get("region")
+    if region in ("US", "UK"):
+        return {"region": region, "regions": [region], "hotlines": HOTLINES[region]}
+    # both
+    return {
+        "region": None,
+        "regions": ["US", "UK"],
+        "hotlines": {"US": HOTLINES["US"], "UK": HOTLINES["UK"]},
+    }
+
+
+# -------- Reports / PDF Export --------
+
+@api.get("/reports/pdf")
+async def reports_pdf(
+    period: str = "week",
+    scope: str = "clinical",
+    current=Depends(get_current_user),
+):
+    if period not in ("week", "month"):
+        raise HTTPException(status_code=422, detail="period must be 'week' or 'month'")
+    if scope not in ("clinical", "full", "personal"):
+        raise HTTPException(status_code=422, detail="scope must be 'clinical', 'full', or 'personal'")
+
+    user = await user_doc(current["id"])
+    today_dt = datetime.now(timezone.utc).date()
+    days = 7 if period == "week" else 30
+    start_dt = today_dt - timedelta(days=days - 1)
+    period_label = "Last 7 days" if period == "week" else "Last 30 days"
+    start_iso = start_dt.isoformat()
+
+    # Sobriety
+    sob_start = user.get("sobriety_start") or today_str()
+    days_sober = max((today_dt - date.fromisoformat(sob_start)).days, 0)
+
+    # Diet aggregation
+    meals = await db.meals.find(
+        {"user_id": current["id"], "date": {"$gte": start_iso}}, {"_id": 0}
+    ).to_list(2000)
+    by_day = {}
+    for m in meals:
+        d = m.get("date")
+        by_day.setdefault(d, {"protein_g": 0.0, "salt_g": 0.0, "water_ml": 0.0, "calories": 0.0})
+        by_day[d]["protein_g"] += float(m.get("protein_g") or 0)
+        by_day[d]["salt_g"] += float(m.get("salt_g") or 0)
+        by_day[d]["water_ml"] += float(m.get("water_ml") or 0)
+        by_day[d]["calories"] += float(m.get("calories") or 0)
+    days_logged = len(by_day)
+    diet_summary = {
+        "days_logged": days_logged,
+        "avg_protein_g": round(sum(d["protein_g"] for d in by_day.values()) / max(days_logged, 1), 1),
+        "avg_salt_g": round(sum(d["salt_g"] for d in by_day.values()) / max(days_logged, 1), 2),
+        "avg_water_ml": round(sum(d["water_ml"] for d in by_day.values()) / max(days_logged, 1), 0),
+        "targets": {"protein_g_min": 140, "salt_g_max": 2, "water_ml_max": 1500},
+    }
+    protein_ok = sum(1 for d in by_day.values() if d["protein_g"] >= 140)
+    salt_ok = sum(1 for d in by_day.values() if d["salt_g"] <= 2)
+    water_ok = sum(1 for d in by_day.values() if d["water_ml"] <= 1500)
+    diet_compliance = {
+        "protein_pct": round(protein_ok / max(days_logged, 1) * 100),
+        "salt_pct": round(salt_ok / max(days_logged, 1) * 100),
+        "water_pct": round(water_ok / max(days_logged, 1) * 100),
+    }
+
+    # Blood tests in range
+    blood = await db.blood_tests.find(
+        {"user_id": current["id"], "date": {"$gte": start_iso}}, {"_id": 0, "user_id": 0}
+    ).sort("date", 1).to_list(200)
+
+    # Medications + adherence
+    meds = await db.medications.find(
+        {"user_id": current["id"]}, {"_id": 0, "user_id": 0}
+    ).to_list(200)
+    logs = await db.med_logs.find(
+        {"user_id": current["id"], "date": {"$gte": start_iso}}, {"_id": 0, "user_id": 0}
+    ).to_list(2000)
+    adherence = {}
+    for m in meds:
+        if not m.get("active"):
+            adherence[m["id"]] = {"taken": 0, "expected": 0}
+            continue
+        expected = days
+        taken = sum(1 for log in logs if log.get("medication_id") == m["id"] and log.get("taken"))
+        adherence[m["id"]] = {"taken": taken, "expected": expected}
+
+    # Goals
+    goals = await db.goals.find(
+        {"user_id": current["id"], "week_start": {"$gte": (start_dt - timedelta(days=6)).isoformat()}},
+        {"_id": 0, "user_id": 0},
+    ).sort("week_start", 1).to_list(200)
+
+    # Diary
+    diary = await db.diary.find(
+        {"user_id": current["id"], "date": {"$gte": start_iso}}, {"_id": 0, "user_id": 0}
+    ).sort("date", 1).to_list(200)
+    diary_avg = round(sum(e["rating"] for e in diary) / len(diary), 1) if diary else None
+
+    pdf_bytes = build_report_pdf(
+        user=user,
+        period_label=period_label,
+        start_date=start_dt,
+        end_date=today_dt,
+        days_sober=days_sober,
+        scope=scope,
+        diet_summary=diet_summary,
+        diet_compliance=diet_compliance,
+        blood_tests=blood,
+        medications=meds,
+        medication_adherence=adherence,
+        goals=goals,
+        diary=diary if scope in ("full", "personal") else [],
+        diary_avg_rating=diary_avg if scope in ("full", "personal") else None,
+    )
+
+    filename = f"anchor-report-{user.get('name','user').replace(' ', '-').lower()}-{today_dt.isoformat()}-{period}-{scope}.pdf"
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 app.include_router(api)

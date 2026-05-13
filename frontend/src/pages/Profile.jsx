@@ -8,7 +8,7 @@ import { Save, KeyRound } from "lucide-react";
 
 const Profile = () => {
     const { user, setUser } = useAuth();
-    const [form, setForm] = useState({ name: "", sobriety_start: "", height_cm: "", weight_kg: "" });
+    const [form, setForm] = useState({ name: "", sobriety_start: "", height_cm: "", weight_kg: "", region: "" });
     const [pwForm, setPwForm] = useState({ current_password: "", new_password: "" });
     const [saving, setSaving] = useState(false);
     const [changingPw, setChangingPw] = useState(false);
@@ -20,6 +20,7 @@ const Profile = () => {
                 sobriety_start: user.sobriety_start || "",
                 height_cm: user.height_cm ?? "",
                 weight_kg: user.weight_kg ?? "",
+                region: user.region || "",
             });
         }
     }, [user]);
@@ -35,6 +36,7 @@ const Profile = () => {
                 sobriety_start: form.sobriety_start || null,
                 height_cm: form.height_cm === "" ? null : parseFloat(form.height_cm),
                 weight_kg: form.weight_kg === "" ? null : parseFloat(form.weight_kg),
+                region: form.region || null,
             };
             const { data } = await api.patch("/users/me", payload);
             setUser(data);
@@ -92,6 +94,27 @@ const Profile = () => {
                         <label className="label-eyebrow">Weight (kg)</label>
                         <Input data-testid="profile-weight" type="number" value={form.weight_kg} onChange={(e) => setField("weight_kg", e.target.value)} className="mt-2" />
                     </div>
+                </div>
+                <div>
+                    <label className="label-eyebrow">Region</label>
+                    <div className="flex gap-2 mt-2">
+                        {[{ v: "", l: "Both" }, { v: "US", l: "United States" }, { v: "UK", l: "United Kingdom" }].map((r) => (
+                            <button
+                                type="button"
+                                key={r.v || "both"}
+                                onClick={() => setField("region", r.v)}
+                                data-testid={`region-${r.v || "both"}`}
+                                className={`text-sm px-4 py-2 rounded-full border transition-colors ${
+                                    form.region === r.v
+                                        ? "bg-primary text-primary-foreground border-primary"
+                                        : "bg-transparent text-foreground border-border hover:bg-secondary"
+                                }`}
+                            >
+                                {r.l}
+                            </button>
+                        ))}
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-2">Filters the crisis hotlines we show you.</div>
                 </div>
                 <Button type="submit" disabled={saving} data-testid="profile-save-btn" className="rounded-full px-7">
                     <Save className="w-4 h-4 mr-1.5" strokeWidth={1.5} /> {saving ? "Saving…" : "Save changes"}

@@ -1,6 +1,6 @@
 import React from "react";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
-import { Anchor, Home, BookOpen, UtensilsCrossed, Camera, Activity, Target, BookText, LogOut, Pill, UserCircle } from "lucide-react";
+import { Anchor, Home, BookOpen, UtensilsCrossed, Camera, Activity, Target, BookText, LogOut, Pill, UserCircle, LifeBuoy, FileDown } from "lucide-react";
 import { useAuth } from "../lib/auth";
 
 const NAV = [
@@ -11,6 +11,7 @@ const NAV = [
     { to: "/app/blood", label: "Blood Tests", icon: Activity },
     { to: "/app/meds", label: "Medications", icon: Pill },
     { to: "/app/goals", label: "Weekly Goals", icon: Target },
+    { to: "/app/reports", label: "Reports", icon: FileDown },
     { to: "/app/glossary", label: "Glossary", icon: BookText },
     { to: "/app/profile", label: "Profile", icon: UserCircle },
 ];
@@ -56,6 +57,20 @@ const AppShell = () => {
                     })}
                 </nav>
                 <div className="border-t border-border pt-4 mt-4">
+                    <NavLink
+                        to="/app/crisis"
+                        data-testid="nav-crisis"
+                        className={({ isActive }) =>
+                            `flex items-center gap-3 px-4 py-3 rounded-2xl text-sm transition-colors mb-2 ${
+                                isActive
+                                    ? "bg-accent/15 text-accent font-medium"
+                                    : "text-accent hover:bg-accent/10"
+                            }`
+                        }
+                    >
+                        <LifeBuoy className="w-4 h-4" strokeWidth={1.5} />
+                        Need help now?
+                    </NavLink>
                     <div className="px-2 mb-3">
                         <div className="text-xs text-muted-foreground">Signed in as</div>
                         <div className="text-sm font-medium truncate" data-testid="sidebar-user">{user?.name || user?.email}</div>

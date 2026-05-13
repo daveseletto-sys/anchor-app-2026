@@ -1,0 +1,42 @@
+{
+  "summary": "Iteration 3 testing complete. Backend 43/43 pytest passes (13 new iter3 + 11 iter2 + 19 iter1 regression). Found 1 real frontend integration bug: 'Both' region reset doesn't clear region in DB because frontend sends null and backend's PATCH /users/me filters null values out. Crisis filtering for explicit US/UK works perfectly. PDF download flow works end-to-end and produces a valid PDF.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "PATCH /api/users/me", "issue": "Treats null values as 'no change' for ALL fields (filter `if v is not None`). Cannot clear region back to 'Both' via null. Empty string '' works because it's in the allowed list and not filtered, but frontend sends null."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Profile → Region 'Both' → save → Crisis", "issue": "After clicking 'Both' and Save, Crisis page still shows only the previously-set region (US/UK). Frontend Profile.jsx (line ~40) sends `region: form.region || null`, but backend PATCH /users/me drops null fields from the update dict, so region is never cleared. Fix EITHER: (1) Profile.jsx send `region: form.region === '' ? '' : form.region` so it sends '' when Both is selected; OR (2) backend explicitly accept null/empty for region: `if 'region' in payload.model_fields_set: update['region'] = payload.region or None` (use Pydantic model_fields_set to differentiate not-provided vs explicitly null).", "affected_selectors": ["region-both", "profile-save-btn", "crisis-root"]}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration3.py",
+    "/app/test_reports/pytest/pytest_iter3.xml"
+  ],
+  "action_items": [
+    "Fix region='Both' clear flow. Recommended: in /app/frontend/src/pages/Profile.jsx, replace `region: form.region || null` with `region: form.region` (empty string is fine — backend already permits ''). OR backend: in PATCH /users/me, use `payload.model_dump(exclude_unset=True)` instead of filtering None, so explicit null/empty clears the field.",
+    "Consider validating that the change still keeps the 422 behavior for region='INVALID' (it will — backend check happens after update assembly)."
+  ],
+  "critical_code_review_comments": [
+    "PATCH /users/me uses `{k:v for k,v in payload.model_dump().items() if v is not None}` which makes it impossible to ever null-out an optional field. Switch to `model_dump(exclude_unset=True)` to support explicit clearing.",
+    "pdf_report.py is well-structured (~220 lines). No issues.",
+    "/api/crisis correctly returns dict-vs-list shape based on region. Tests cover both shapes.",
+    "Reports.jsx correctly handles Content-Disposition filename parsing and triggers browser download via blob URL — robust.",
+    "AppShell sidebar 'Need help now?' link uses accent color and lives below the main nav block — matches spec, accessible.",
+    "Backend reports endpoint reuses `user_doc` and aggregates meals/blood/meds/goals/diary correctly; query uses `date: {$gte: start_iso}` (string compare works since dates are ISO YYYY-MM-DD)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration3.py (new)"
+  ],
+  "success_rate": {"backend": "100% (43/43)", "frontend": "~85% — region 'Both' reset broken; US/UK selection + PDF download both work"},
+  "test_credentials": "tester@anchor.app / Anchor!2026 (Riley)",
+  "seed_data_creation": "None — used existing user. Test toggles region across runs; teardown restores region=''.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "After fix, retest the Profile→Both→Save→Crisis flow specifically; verify Crisis shows both US (5) + UK (6) sections (11 total cards) after selecting Both. Also re-run /app/backend/tests/test_iteration3.py to confirm no regression on region='' clearing. Frontend testID 'region-both' value sent is empty string.",
+  "rca of the issue": "ROOT CAUSE: /app/backend/server.py:531 — `update = {k: v for k, v in payload.model_dump().items() if v is not None}`. This filter drops any field with value None. Frontend Profile.jsx sends `region: form.region || null`; when user picks Both (form.region=''), null is sent, which gets stripped from the update dict — so DB region remains the previous value (US/UK). REPRO: 1) Login as tester. 2) Profile → click 'United States' → Save → Crisis page shows 5 US cards (correct). 3) Profile → click 'Both' → Save → Crisis page still shows 5 US cards (BUG; expected 11). MITIGATION: use `payload.model_dump(exclude_unset=True)` so only fields explicitly sent are updated, and null is preserved as a valid clear value; OR frontend sends '' instead of null for region."
+}

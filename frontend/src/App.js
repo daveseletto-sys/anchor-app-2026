@@ -15,6 +15,8 @@ import Goals from "./pages/Goals";
 import Glossary from "./pages/Glossary";
 import Profile from "./pages/Profile";
 import Medications from "./pages/Medications";
+import Crisis from "./pages/Crisis";
+import Reports from "./pages/Reports";
 
 const Private = ({ children }) => {
     const { user, loading } = useAuth();
@@ -45,7 +47,9 @@ function App() {
                             <Route path="blood" element={<BloodTests />} />
                             <Route path="goals" element={<Goals />} />
                             <Route path="meds" element={<Medications />} />
+                            <Route path="reports" element={<Reports />} />
                             <Route path="glossary" element={<Glossary />} />
+                            <Route path="crisis" element={<Crisis />} />
                             <Route path="profile" element={<Profile />} />
                         </Route>
                         <Route path="*" element={<Navigate to="/" replace />} />
