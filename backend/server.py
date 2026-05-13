@@ -1179,8 +1179,14 @@ async def milestones(current=Depends(get_current_user)):
     sob_start = user.get("sobriety_start") or today_dt.isoformat()
     days_sober = max((today_dt - date.fromisoformat(sob_start)).days, 0)
 
-    # Aggregate per-day diet totals (whole history)
-    meals = await db.meals.find({"user_id": current["id"]}, {"_id": 0}).to_list(50000)
+    # Bound history to last 365 days for performance
+    one_year_ago = (today_dt - timedelta(days=365)).isoformat()
+
+    # Aggregate per-day diet totals (last 365 days)
+    meals = await db.meals.find(
+        {"user_id": current["id"], "date": {"$gte": one_year_ago}},
+        {"_id": 0, "user_id": 0},
+    ).limit(10000).to_list(10000)
     by_day = {}
     for m in meals:
         d = m.get("date")
@@ -1211,8 +1217,11 @@ async def milestones(current=Depends(get_current_user)):
     days_within_salt = sum(1 for v in by_day.values() if v["salt_g"] <= 2 and v["salt_g"] > 0)
     days_logged = len(by_day)
 
-    # Diary milestones
-    diary = await db.diary.find({"user_id": current["id"]}, {"_id": 0, "user_id": 0}).to_list(50000)
+    # Diary milestones (last 365 days)
+    diary = await db.diary.find(
+        {"user_id": current["id"], "date": {"$gte": one_year_ago}},
+        {"_id": 0, "user_id": 0},
+    ).limit(10000).to_list(10000)
     diary_count = len(diary)
     best_rating_day = max(diary, key=lambda e: e.get("rating", 0), default=None)
     avg_rating = round(sum(e["rating"] for e in diary) / len(diary), 1) if diary else None
@@ -1242,8 +1251,10 @@ async def milestones(current=Depends(get_current_user)):
     taken = sum(1 for log in logs if log.get("taken"))
     med_adherence_pct = round(taken / expected * 100) if expected else None
 
-    # Goals completed
-    all_goals = await db.goals.find({"user_id": current["id"]}, {"_id": 0}).to_list(5000)
+    # Goals completed (bounded)
+    all_goals = await db.goals.find(
+        {"user_id": current["id"]}, {"_id": 0, "user_id": 0}
+    ).limit(2000).to_list(2000)
     goals_completed = sum(1 for g in all_goals if g.get("completed"))
 
     return {
