@@ -1,0 +1,52 @@
+{
+  "summary": "Iteration 2 end-to-end testing for Anchor Recovery — Profile, Change-Password, Medications CRUD, Med-log UPSERT (no duplicates), Cascade delete of med_logs, and Claude Sonnet 4.5 Weekly Insight. Backend: 19/19 iter1 regression + 11/11 new iter2 = 30/30 PASS. Frontend: Login, Sidebar (Medications/Profile nav), Dashboard WeeklyInsight (Generate → 206-word Claude reflection rendered), Profile (save persists name/sobriety/height/weight; wrong current pw toasts 'Current password is incorrect'), Medications (add → check (taken=true) → uncheck (taken=false) via upsert → delete) all WORKING.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "PATCH /api/users/me",
+        "issue": "Spec says bad sobriety_start date should return 422, but server uses date.fromisoformat() which raises ValueError → unhandled → 500. Test accepts 400/422/500; observed 500. Recommend catching ValueError and raising HTTPException(422)."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_anchor_api.py",
+    "/app/backend/tests/test_iteration2.py",
+    "/app/backend/tests/conftest.py",
+    "/app/test_reports/pytest/pytest_iter2.xml",
+    "/app/test_reports/pytest/pytest_iter1_regression.xml"
+  ],
+  "action_items": [
+    "Optional: convert PATCH /api/users/me invalid ISO date handling from 500 to 422 by wrapping date.fromisoformat() in try/except (or use Pydantic date type in ProfileUpdate).",
+    "Optional: server.py is now 757 lines — consider splitting routers per resource for maintainability.",
+    "Optional: weekly_insights stores full 'context' dict per cache row; consider stripping before returning to avoid future payload bloat (currently not returned by endpoint, so low priority)."
+  ],
+  "critical_code_review_comments": [
+    "POST /api/medications/log uses find_one + conditional insert/update — correctly implements UPSERT semantics. Verified only ONE doc exists per (user_id, medication_id, date) after multiple toggles.",
+    "DELETE /api/medications/{id} correctly cascades to db.med_logs.delete_many() for the same user_id and medication_id. Verified via test_delete_med_cascades_logs.",
+    "weekly_insight cache key is (user_id, week_start) where week_start = Monday of current UTC week (today - today.weekday()). Confirmed.",
+    "llm_service.generate_weekly_insight uses provider='anthropic', model='claude-sonnet-4-5-20250929' as specified. Output observed at 206 words, 2-3 paragraphs, warm tone, references user's name 'Riley' and 'days_sober' value. Good.",
+    "PATCH /users/me uses date.fromisoformat() without try/except → unexpected ValueErrors become 500 instead of 422. Minor.",
+    "Cross-user isolation verified for /api/medications (PATCH/DELETE on another user's med returns 404). Good.",
+    "All medication endpoints exclude _id and user_id from responses. Good.",
+    "Frontend Medications.jsx correctly calls POST /medications/log with taken flag — relies on backend upsert. Today's check-off UI re-reads list after each toggle (load()). Works as expected."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration2.py (new — 11 tests)"
+  ],
+  "success_rate": {
+    "backend": "100% (30/30: 19 iter1 regression + 11 iter2 new)",
+    "frontend": "100% of critical flows (login, sidebar, profile save+persist, change-password error, medication CRUD + check-off + delete, weekly insight generate+render)"
+  },
+  "test_credentials": "tester@anchor.app / Anchor!2026 (per /app/memory/test_credentials.md)",
+  "seed_data_creation": "Each test creates and cleans up its own TEST_-prefixed med/log records. Existing seed med 'Thiamine' from iter1 confirmed still present and toggleable.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "All iter1 + iter2 backend tests pass on https://progress-hub-256.preview.emergentagent.com. Use /app/backend/tests/{conftest.py,test_anchor_api.py,test_iteration2.py} as regression suite. Note: Claude weekly insight call takes ~10-20s; test timeout set to 120s. The weekly_insights cache survives between test runs (same week), so after first generation in a week subsequent POSTs still regenerate (endpoint always regenerates+upserts). Wrong-pw assertion in change_password test is robust (400). Frontend Profile shows a 'Loading…' spinner while /auth/me resolves — allow 15-20s before checking [data-testid=profile-root].",
+  "rca_of_the_issue": "No bugs found requiring fix. Only minor observation: PATCH /users/me with invalid sobriety_start ISO date returns 500 instead of spec'd 422 because date.fromisoformat() raises ValueError which is not caught. Mitigation: wrap in try/except or use pydantic 'date' type instead of Optional[str] in ProfileUpdate. Reproduction: curl -X PATCH /api/users/me -H auth -d '{\"sobriety_start\":\"not-a-date\"}' → 500."
+}

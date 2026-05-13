@@ -1,6 +1,6 @@
 import React from "react";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
-import { Anchor, Home, BookOpen, UtensilsCrossed, Camera, Activity, Target, BookText, LogOut } from "lucide-react";
+import { Anchor, Home, BookOpen, UtensilsCrossed, Camera, Activity, Target, BookText, LogOut, Pill, UserCircle } from "lucide-react";
 import { useAuth } from "../lib/auth";
 
 const NAV = [
@@ -9,8 +9,10 @@ const NAV = [
     { to: "/app/diet", label: "Diet Tracker", icon: UtensilsCrossed },
     { to: "/app/food-label", label: "Food Label", icon: Camera },
     { to: "/app/blood", label: "Blood Tests", icon: Activity },
+    { to: "/app/meds", label: "Medications", icon: Pill },
     { to: "/app/goals", label: "Weekly Goals", icon: Target },
     { to: "/app/glossary", label: "Glossary", icon: BookText },
+    { to: "/app/profile", label: "Profile", icon: UserCircle },
 ];
 
 const AppShell = () => {

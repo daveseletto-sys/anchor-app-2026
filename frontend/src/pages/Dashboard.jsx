@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import ProgressRing from "../components/ProgressRing";
+import WeeklyInsight from "../components/WeeklyInsight";
 import { Link } from "react-router-dom";
 import { ArrowRight, Sparkles } from "lucide-react";
 
@@ -143,6 +144,11 @@ const Dashboard = () => {
                         )}
                     </div>
                 </div>
+            </div>
+
+            {/* Weekly insight */}
+            <div className="mt-5">
+                <WeeklyInsight />
             </div>
         </div>
     );
