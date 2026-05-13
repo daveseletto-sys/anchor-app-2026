@@ -27,6 +27,12 @@ from glossary_data import GLOSSARY  # noqa: E402
 from hotlines_data import HOTLINES  # noqa: E402
 from pdf_report import build_report_pdf  # noqa: E402
 from fastapi.responses import Response  # noqa: E402
+from email_service import (  # noqa: E402
+    email_configured,
+    send_email,
+    doctor_report_html,
+    weekly_digest_html,
+)
 
 mongo_url = os.environ["MONGO_URL"]
 client = AsyncIOMotorClient(mongo_url)
@@ -159,6 +165,13 @@ class ShareLinkOut(BaseModel):
     expires_at: str
     revoked: bool
     created_at: str
+
+
+class ReportEmailIn(BaseModel):
+    recipient_email: EmailStr
+    period: str = "week"        # "week" | "month"
+    scope: str = "clinical"     # "clinical" | "full" | "personal"
+    note: Optional[str] = ""
 
 
 class ProfileUpdate(BaseModel):
@@ -782,31 +795,25 @@ async def get_crisis_lines(current=Depends(get_current_user)):
 
 # -------- Reports / PDF Export --------
 
-@api.get("/reports/pdf")
-async def reports_pdf(
-    period: str = "week",
-    scope: str = "clinical",
-    current=Depends(get_current_user),
-):
+async def _generate_report_pdf(user_id: str, period: str, scope: str) -> tuple[bytes, str, str]:
+    """Return (pdf_bytes, filename, period_label) for the given user."""
     if period not in ("week", "month"):
         raise HTTPException(status_code=422, detail="period must be 'week' or 'month'")
     if scope not in ("clinical", "full", "personal"):
         raise HTTPException(status_code=422, detail="scope must be 'clinical', 'full', or 'personal'")
 
-    user = await user_doc(current["id"])
+    user = await user_doc(user_id)
     today_dt = datetime.now(timezone.utc).date()
     days = 7 if period == "week" else 30
     start_dt = today_dt - timedelta(days=days - 1)
     period_label = "Last 7 days" if period == "week" else "Last 30 days"
     start_iso = start_dt.isoformat()
 
-    # Sobriety
     sob_start = user.get("sobriety_start") or today_str()
     days_sober = max((today_dt - date.fromisoformat(sob_start)).days, 0)
 
-    # Diet aggregation
     meals = await db.meals.find(
-        {"user_id": current["id"], "date": {"$gte": start_iso}}, {"_id": 0}
+        {"user_id": user_id, "date": {"$gte": start_iso}}, {"_id": 0}
     ).to_list(2000)
     by_day = {}
     for m in meals:
@@ -833,17 +840,15 @@ async def reports_pdf(
         "water_pct": round(water_ok / max(days_logged, 1) * 100),
     }
 
-    # Blood tests in range
     blood = await db.blood_tests.find(
-        {"user_id": current["id"], "date": {"$gte": start_iso}}, {"_id": 0, "user_id": 0}
+        {"user_id": user_id, "date": {"$gte": start_iso}}, {"_id": 0, "user_id": 0}
     ).sort("date", 1).to_list(200)
 
-    # Medications + adherence
     meds = await db.medications.find(
-        {"user_id": current["id"]}, {"_id": 0, "user_id": 0}
+        {"user_id": user_id}, {"_id": 0, "user_id": 0}
     ).to_list(200)
     logs = await db.med_logs.find(
-        {"user_id": current["id"], "date": {"$gte": start_iso}}, {"_id": 0, "user_id": 0}
+        {"user_id": user_id, "date": {"$gte": start_iso}}, {"_id": 0, "user_id": 0}
     ).to_list(2000)
     adherence = {}
     for m in meds:
@@ -854,15 +859,13 @@ async def reports_pdf(
         taken = sum(1 for log in logs if log.get("medication_id") == m["id"] and log.get("taken"))
         adherence[m["id"]] = {"taken": taken, "expected": expected}
 
-    # Goals
     goals = await db.goals.find(
-        {"user_id": current["id"], "week_start": {"$gte": (start_dt - timedelta(days=6)).isoformat()}},
+        {"user_id": user_id, "week_start": {"$gte": (start_dt - timedelta(days=6)).isoformat()}},
         {"_id": 0, "user_id": 0},
     ).sort("week_start", 1).to_list(200)
 
-    # Diary
     diary = await db.diary.find(
-        {"user_id": current["id"], "date": {"$gte": start_iso}}, {"_id": 0, "user_id": 0}
+        {"user_id": user_id, "date": {"$gte": start_iso}}, {"_id": 0, "user_id": 0}
     ).sort("date", 1).to_list(200)
     diary_avg = round(sum(e["rating"] for e in diary) / len(diary), 1) if diary else None
 
@@ -884,6 +887,16 @@ async def reports_pdf(
     )
 
     filename = f"anchor-report-{user.get('name','user').replace(' ', '-').lower()}-{today_dt.isoformat()}-{period}-{scope}.pdf"
+    return pdf_bytes, filename, period_label
+
+
+@api.get("/reports/pdf")
+async def reports_pdf(
+    period: str = "week",
+    scope: str = "clinical",
+    current=Depends(get_current_user),
+):
+    pdf_bytes, filename, _ = await _generate_report_pdf(current["id"], period, scope)
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",
@@ -1075,6 +1088,262 @@ async def view_shared(token: str):
 
 
 app.include_router(api)
+
+
+# -------- Email: send report to doctor --------
+
+@api.post("/reports/email")
+async def email_report(payload: ReportEmailIn, current=Depends(get_current_user)):
+    if not email_configured():
+        raise HTTPException(status_code=503, detail="Email service is not configured. Add RESEND_API_KEY.")
+    pdf_bytes, filename, period_label = await _generate_report_pdf(current["id"], payload.period, payload.scope)
+    user = await user_doc(current["id"])
+    html = doctor_report_html(
+        sender_name=user.get("name", "An Anchor user"),
+        period_label=period_label,
+        personal_note=(payload.note or "").strip(),
+    )
+    subject = f"{user.get('name','An Anchor user')}'s recovery report — {period_label}"
+    try:
+        result = await send_email(
+            to=str(payload.recipient_email),
+            subject=subject,
+            html=html,
+            reply_to=user.get("email"),
+            attachment_bytes=pdf_bytes,
+            attachment_filename=filename,
+        )
+        return {"ok": True, "email_id": result.get("id") if isinstance(result, dict) else None}
+    except Exception as e:
+        logger.exception("send report email failed")
+        msg = str(e)
+        if "only send testing emails" in msg.lower() or "verify a domain" in msg.lower():
+            raise HTTPException(
+                status_code=400,
+                detail="Resend is in test mode — emails can only go to the email tied to your Resend account. To send to your doctor (or any other address), verify a domain at resend.com/domains and update SENDER_EMAIL in /app/backend/.env.",
+            )
+        raise HTTPException(status_code=502, detail=f"Email send failed: {msg}")
+
+
+# -------- Email: weekly insight digest --------
+
+@api.post("/insights/email-digest")
+async def email_weekly_digest(current=Depends(get_current_user)):
+    if not email_configured():
+        raise HTTPException(status_code=503, detail="Email service is not configured. Add RESEND_API_KEY.")
+    user = await user_doc(current["id"])
+
+    today_dt = datetime.now(timezone.utc).date()
+    monday = today_dt - timedelta(days=today_dt.weekday())
+    week_start = monday.isoformat()
+
+    cached = await db.weekly_insights.find_one(
+        {"user_id": current["id"], "week_start": week_start}, {"_id": 0, "user_id": 0}
+    )
+    if not cached or not (cached.get("text") or "").strip():
+        raise HTTPException(status_code=400, detail="No insight for this week yet — generate one first on the Dashboard.")
+
+    sob_start = user.get("sobriety_start") or today_dt.isoformat()
+    days_sober = max((today_dt - date.fromisoformat(sob_start)).days, 0)
+    week_label = f"Week of {monday.strftime('%b %d, %Y')}"
+
+    html = weekly_digest_html(
+        name=user.get("name", "friend"),
+        days_sober=days_sober,
+        insight_text=cached["text"],
+        week_label=week_label,
+    )
+    try:
+        result = await send_email(
+            to=user["email"],
+            subject=f"This week — {user.get('name','friend')}",
+            html=html,
+        )
+        return {"ok": True, "email_id": result.get("id") if isinstance(result, dict) else None}
+    except Exception as e:
+        logger.exception("send digest email failed")
+        msg = str(e)
+        if "only send testing emails" in msg.lower() or "verify a domain" in msg.lower():
+            raise HTTPException(
+                status_code=400,
+                detail="Resend is in test mode — your account email is not verified with Resend so we can't email this digest to you yet. Update your account email in Anchor to match your Resend account, or verify a domain at resend.com/domains.",
+            )
+        raise HTTPException(status_code=502, detail=f"Email send failed: {msg}")
+
+
+# -------- Milestones (personal records, no ranking) --------
+
+@api.get("/milestones")
+async def milestones(current=Depends(get_current_user)):
+    user = await user_doc(current["id"])
+    today_dt = datetime.now(timezone.utc).date()
+    sob_start = user.get("sobriety_start") or today_dt.isoformat()
+    days_sober = max((today_dt - date.fromisoformat(sob_start)).days, 0)
+
+    # Aggregate per-day diet totals (whole history)
+    meals = await db.meals.find({"user_id": current["id"]}, {"_id": 0}).to_list(50000)
+    by_day = {}
+    for m in meals:
+        d = m.get("date")
+        by_day.setdefault(d, {"protein_g": 0.0, "salt_g": 0.0, "water_ml": 0.0})
+        by_day[d]["protein_g"] += float(m.get("protein_g") or 0)
+        by_day[d]["salt_g"] += float(m.get("salt_g") or 0)
+        by_day[d]["water_ml"] += float(m.get("water_ml") or 0)
+
+    # Best single day
+    best_protein_day = max(by_day.items(), key=lambda kv: kv[1]["protein_g"], default=(None, {"protein_g": 0}))
+    # Compliance streak (consecutive days hitting protein target)
+    sorted_days = sorted(by_day.keys())
+    best_streak = 0
+    cur_streak = 0
+    prev = None
+    for d in sorted_days:
+        if by_day[d]["protein_g"] >= 140:
+            if prev is None or (date.fromisoformat(d) - date.fromisoformat(prev)).days == 1:
+                cur_streak += 1
+            else:
+                cur_streak = 1
+            best_streak = max(best_streak, cur_streak)
+            prev = d
+        else:
+            cur_streak = 0
+            prev = d
+    days_meeting_protein = sum(1 for v in by_day.values() if v["protein_g"] >= 140)
+    days_within_salt = sum(1 for v in by_day.values() if v["salt_g"] <= 2 and v["salt_g"] > 0)
+    days_logged = len(by_day)
+
+    # Diary milestones
+    diary = await db.diary.find({"user_id": current["id"]}, {"_id": 0, "user_id": 0}).to_list(50000)
+    diary_count = len(diary)
+    best_rating_day = max(diary, key=lambda e: e.get("rating", 0), default=None)
+    avg_rating = round(sum(e["rating"] for e in diary) / len(diary), 1) if diary else None
+    # Best 7-day rolling average mood
+    by_diary_date = {e["date"]: e.get("rating", 0) for e in diary}
+    best_7d_avg = None
+    best_7d_window = None
+    if diary:
+        dates = sorted(by_diary_date.keys())
+        for d in dates:
+            d_dt = date.fromisoformat(d)
+            window = [by_diary_date.get((d_dt - timedelta(days=i)).isoformat()) for i in range(7)]
+            window = [v for v in window if v is not None]
+            if len(window) >= 4:  # need at least 4 days in window to count
+                avg = round(sum(window) / len(window), 1)
+                if best_7d_avg is None or avg > best_7d_avg:
+                    best_7d_avg = avg
+                    best_7d_window = d
+
+    # Medication adherence (last 30 days)
+    meds = await db.medications.find({"user_id": current["id"], "active": True}, {"_id": 0}).to_list(100)
+    week_ago = (today_dt - timedelta(days=29)).isoformat()
+    logs = await db.med_logs.find(
+        {"user_id": current["id"], "date": {"$gte": week_ago}}, {"_id": 0}
+    ).to_list(5000)
+    expected = len(meds) * 30
+    taken = sum(1 for log in logs if log.get("taken"))
+    med_adherence_pct = round(taken / expected * 100) if expected else None
+
+    # Goals completed
+    all_goals = await db.goals.find({"user_id": current["id"]}, {"_id": 0}).to_list(5000)
+    goals_completed = sum(1 for g in all_goals if g.get("completed"))
+
+    return {
+        "current_streak_days": days_sober,
+        "best_protein_day": (
+            {"date": best_protein_day[0], "protein_g": round(best_protein_day[1]["protein_g"], 1)}
+            if best_protein_day[0] else None
+        ),
+        "best_protein_streak": best_streak,
+        "days_meeting_protein": days_meeting_protein,
+        "days_within_salt": days_within_salt,
+        "diet_days_logged": days_logged,
+        "diary_entries": diary_count,
+        "avg_rating_all_time": avg_rating,
+        "best_rating_day": (
+            {"date": best_rating_day.get("date"), "rating": best_rating_day.get("rating")}
+            if best_rating_day else None
+        ),
+        "best_7d_mood_avg": best_7d_avg,
+        "best_7d_window_end": best_7d_window,
+        "med_adherence_30d_pct": med_adherence_pct,
+        "goals_completed": goals_completed,
+    }
+
+
+# -------- Community averages (anonymous, no ranking) --------
+
+@api.get("/community/averages")
+async def community_averages(current=Depends(get_current_user)):
+    today_dt = datetime.now(timezone.utc).date()
+    month_ago = (today_dt - timedelta(days=29)).isoformat()
+    # Aggregate diet across ALL users (anonymous)
+    pipeline = [
+        {"$match": {"date": {"$gte": month_ago}}},
+        {"$group": {
+            "_id": {"user": "$user_id", "date": "$date"},
+            "protein_g": {"$sum": "$protein_g"},
+            "salt_g": {"$sum": "$salt_g"},
+            "water_ml": {"$sum": "$water_ml"},
+        }},
+        {"$group": {
+            "_id": None,
+            "avg_protein_g": {"$avg": "$protein_g"},
+            "avg_salt_g": {"$avg": "$salt_g"},
+            "avg_water_ml": {"$avg": "$water_ml"},
+            "user_days": {"$sum": 1},
+            "unique_users": {"$addToSet": "$_id.user"},
+        }},
+    ]
+    res = await db.meals.aggregate(pipeline).to_list(1)
+    if not res:
+        return {
+            "users_count": 0,
+            "user_days": 0,
+            "avg_protein_g": None,
+            "avg_salt_g": None,
+            "avg_water_ml": None,
+            "avg_mood": None,
+            "targets": {"protein_g_min": 140, "salt_g_max": 2, "water_ml_max": 1500},
+            "min_users_threshold": 5,
+        }
+    row = res[0]
+    unique_users = len(row.get("unique_users") or [])
+
+    # Community mood avg (last 30 days)
+    mood_pipe = [
+        {"$match": {"date": {"$gte": month_ago}}},
+        {"$group": {"_id": None, "avg_rating": {"$avg": "$rating"}, "users": {"$addToSet": "$user_id"}}},
+    ]
+    mood_res = await db.diary.aggregate(mood_pipe).to_list(1)
+    avg_mood = round(mood_res[0]["avg_rating"], 1) if mood_res else None
+
+    # Privacy guard: only return if we have at least 5 users in aggregate
+    if unique_users < 5:
+        return {
+            "users_count": unique_users,
+            "user_days": row.get("user_days", 0),
+            "avg_protein_g": None,
+            "avg_salt_g": None,
+            "avg_water_ml": None,
+            "avg_mood": None,
+            "targets": {"protein_g_min": 140, "salt_g_max": 2, "water_ml_max": 1500},
+            "min_users_threshold": 5,
+        }
+
+    return {
+        "users_count": unique_users,
+        "user_days": row.get("user_days", 0),
+        "avg_protein_g": round(row["avg_protein_g"], 1) if row.get("avg_protein_g") is not None else None,
+        "avg_salt_g": round(row["avg_salt_g"], 2) if row.get("avg_salt_g") is not None else None,
+        "avg_water_ml": round(row["avg_water_ml"], 0) if row.get("avg_water_ml") is not None else None,
+        "avg_mood": avg_mood,
+        "targets": {"protein_g_min": 140, "salt_g_max": 2, "water_ml_max": 1500},
+        "min_users_threshold": 5,
+    }
+
+
+app.include_router(api)
+
 
 app.add_middleware(
     CORSMiddleware,

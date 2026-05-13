@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { api } from "../lib/api";
-import { Sparkles, RefreshCw, Loader2 } from "lucide-react";
+import { Sparkles, RefreshCw, Loader2, Mail } from "lucide-react";
 import { toast } from "sonner";
 
 const WeeklyInsight = () => {
@@ -8,6 +8,7 @@ const WeeklyInsight = () => {
     const [createdAt, setCreatedAt] = useState(null);
     const [loading, setLoading] = useState(true);
     const [generating, setGenerating] = useState(false);
+    const [emailing, setEmailing] = useState(false);
 
     const fetchCached = async () => {
         try {
@@ -34,6 +35,18 @@ const WeeklyInsight = () => {
             toast.error(err?.response?.data?.detail || "Could not generate");
         } finally {
             setGenerating(false);
+        }
+    };
+
+    const emailMe = async () => {
+        setEmailing(true);
+        try {
+            await api.post("/insights/email-digest");
+            toast.success("Digest emailed to you");
+        } catch (err) {
+            toast.error(err?.response?.data?.detail || "Could not email digest");
+        } finally {
+            setEmailing(false);
         }
     };
 
@@ -72,11 +85,22 @@ const WeeklyInsight = () => {
             {text && (
                 <div className="mt-5">
                     <p className="font-body text-base leading-[1.75] whitespace-pre-wrap text-foreground/90" data-testid="weekly-insight-text">{text}</p>
-                    {createdAt && (
-                        <div className="text-xs text-muted-foreground mt-4">
-                            Updated {new Date(createdAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
-                        </div>
-                    )}
+                    <div className="flex items-center justify-between mt-4 flex-wrap gap-3">
+                        {createdAt && (
+                            <div className="text-xs text-muted-foreground">
+                                Updated {new Date(createdAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+                            </div>
+                        )}
+                        <button
+                            onClick={emailMe}
+                            disabled={emailing}
+                            data-testid="weekly-insight-email"
+                            className="inline-flex items-center gap-1.5 text-xs text-primary border border-primary/30 rounded-full px-3 py-1.5 hover:bg-primary/5 disabled:opacity-50"
+                        >
+                            {emailing ? <Loader2 className="w-3.5 h-3.5 animate-spin" strokeWidth={1.5} /> : <Mail className="w-3.5 h-3.5" strokeWidth={1.5} />}
+                            {emailing ? "Sending…" : "Email me this"}
+                        </button>
+                    </div>
                 </div>
             )}
         </div>

@@ -1,7 +1,9 @@
 import React, { useState } from "react";
-import { BACKEND_URL } from "../lib/api";
+import { api, BACKEND_URL } from "../lib/api";
 import { Button } from "../components/ui/button";
-import { Download, FileText, Stethoscope, NotebookPen, Loader2 } from "lucide-react";
+import { Input } from "../components/ui/input";
+import { Textarea } from "../components/ui/textarea";
+import { Download, FileText, Stethoscope, NotebookPen, Loader2, Mail, Send } from "lucide-react";
 import { toast } from "sonner";
 
 const SCOPES = [
@@ -14,6 +16,30 @@ const Reports = () => {
     const [period, setPeriod] = useState("week");
     const [scope, setScope] = useState("clinical");
     const [downloading, setDownloading] = useState(false);
+    const [emailing, setEmailing] = useState(false);
+    const [recipient, setRecipient] = useState("");
+    const [note, setNote] = useState("");
+
+    const sendEmail = async (e) => {
+        e.preventDefault();
+        if (!recipient) return;
+        setEmailing(true);
+        try {
+            await api.post("/reports/email", {
+                recipient_email: recipient,
+                period,
+                scope,
+                note,
+            });
+            toast.success(`Report emailed to ${recipient}`);
+            setRecipient("");
+            setNote("");
+        } catch (err) {
+            toast.error(err?.response?.data?.detail || "Could not send email");
+        } finally {
+            setEmailing(false);
+        }
+    };
 
     const download = async () => {
         setDownloading(true);
@@ -107,6 +133,28 @@ const Reports = () => {
                     </Button>
                 </div>
             </div>
+
+            {/* Email to doctor */}
+            <form onSubmit={sendEmail} className="tactile-card p-6 sm:p-8 mt-6" data-testid="email-doctor-card">
+                <div className="flex items-center gap-2">
+                    <Mail className="w-4 h-4 text-primary" strokeWidth={1.5} />
+                    <h2 className="font-display text-xl font-medium tracking-tight">Email to your doctor</h2>
+                </div>
+                <p className="text-sm text-muted-foreground mt-2">Sends the same report above as a PDF attachment. Uses the period and scope you've selected.</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-5">
+                    <div>
+                        <label className="label-eyebrow">Recipient email</label>
+                        <Input data-testid="email-recipient-input" type="email" required value={recipient} onChange={(e) => setRecipient(e.target.value)} placeholder="doctor@example.com" className="mt-2" />
+                    </div>
+                    <div className="md:col-span-1">
+                        <label className="label-eyebrow">Short note (optional)</label>
+                        <Input data-testid="email-note-input" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Hi Dr. ___, see attached…" className="mt-2" />
+                    </div>
+                </div>
+                <Button type="submit" disabled={emailing || !recipient} data-testid="email-send-btn" variant="outline" className="rounded-full px-6 mt-5">
+                    {emailing ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" strokeWidth={1.5} /> Sending…</> : <><Send className="w-4 h-4 mr-2" strokeWidth={1.5} /> Send report</>}
+                </Button>
+            </form>
         </div>
     );
 };

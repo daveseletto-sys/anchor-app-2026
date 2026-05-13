@@ -1,6 +1,9 @@
 import os
 import pytest
 import requests
+from dotenv import load_dotenv
+
+load_dotenv("/app/backend/.env")
 
 BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://progress-hub-256.preview.emergentagent.com").rstrip("/")
 

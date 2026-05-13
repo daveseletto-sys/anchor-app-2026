@@ -1,0 +1,37 @@
+{
+  "summary": "Iteration 5 testing complete. Backend: 76/76 pytest passing (13 new iter5 + 63 regression iter1+2+3+4). Frontend: Reports page email-doctor-card sends to unverified address and shows full Resend test-mode toast (not generic 'Email send failed'). Dashboard WeeklyInsight 'Email me this' button (weekly-insight-email) appears once insight text exists and triggers digest; on tester@anchor.app account the digest correctly returns the friendly 400 'test mode — your account email is not verified' toast. Milestones page renders all 9 stat cards (ms-streak, ms-best-protein, ms-protein-streak, ms-best-rating, ms-best-week, ms-med-adherence, ms-goals-completed, ms-protein-compliance, ms-diary-count) and community-not-ready banner is visible (1 of 5 users). Cross-user isolation verified for /api/milestones via fresh second user. /api/community/averages privacy threshold of 5 users enforced (nulls returned, users_count exposed). Resend test-mode error correctly converted to 400 with 'test mode' + 'verify a domain' in detail (not 502).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Dashboard MoodDietChart", "issues": ["Pre-existing recharts ResponsiveContainer width(-1)/height(-1) warning persists from iter4 (cosmetic only)."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration5.py",
+    "/app/test_reports/pytest/pytest_iter5.xml",
+    "/app/test_reports/pytest/pytest_iter5_regression.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py is now ~1345 lines (was 1090 in iter4). Strongly recommend splitting into routers: email_router, milestones_router, community_router, share_router, reports_router. Past the 700-line guideline by ~2x.",
+    "Duplicate `app.include_router(api)` at lines 1090 and 1345 — the second call is a no-op (FastAPI re-registers same routes), but it's confusing and should be removed. The first one means /api/reports/email, /api/insights/email-digest, /api/milestones, /api/community/averages are technically registered AFTER include_router but the api router object is mutable, so it still works. Fragile pattern — move include_router to the very end.",
+    "CORSMiddleware is added AFTER routes are mounted (line 1348). FastAPI handles this for our app, but conventional order is middleware before include_router; consider reordering.",
+    "/api/reports/email and /api/insights/email-digest both manually parse Exception messages for Resend's 'only send testing emails' string. Acceptable, but the magic string is duplicated in two places — extract to a helper or check resend.exceptions.* type when available.",
+    "/api/milestones loads ALL meals + diary + med_logs from history (to_list(50000)) — fine for early users but will not scale. For users with years of data, consider date-bounding the streak/compliance calculation to last 365 days, or pre-aggregating.",
+    "/api/community/averages mood aggregation does NOT enforce the same min-users threshold separately — avg_mood is set BEFORE the privacy guard, then overwritten to null only when unique_users (from meals) < 5. If a user logs diary but not meals, mood unique-users count is never checked. Low-risk for current product but worth a comment / unified guard.",
+    "/api/community/averages defines `month_ago = today - 29 days` then matches `date: {$gte: month_ago}` against meals.date (string ISO). Works because ISO date strings compare lexicographically — but a comment explaining this would help future devs."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration5.py (new — 13 tests)",
+    "/app/backend/tests/conftest.py (load_dotenv from /app/backend/.env so tests can run from /app or /app/backend without env leakage)"
+  ],
+  "success_rate": {"backend": "100% (76/76)", "frontend": "100% — all three new flows (email report, email digest, milestones) verified live with toasts captured"},
+  "test_credentials": "tester@anchor.app / Anchor!2026 (Riley). Resend verified inbox: daveseletto@gmail.com.",
+  "seed_data_creation": "Seeded one weekly_insights row for tester@anchor.app for current week (text='TEST insight body for iter5') so the WeeklyInsight Email button is visible without burning LLM tokens. Added one meal (protein 160g) and one diary entry (rating 9) on today's date to populate milestones cards. Real Resend email was sent to daveseletto@gmail.com during happy-path test (subject 'Riley's recovery report — Last 7 days').",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Iter 5 complete. 76 backend tests in /app/backend/tests/ (run from either /app or /app/backend — conftest loads .env). Reports/email + insights/email-digest both correctly translate Resend test-mode errors to 400. /api/milestones returns the documented 13-key shape and is user-scoped. /api/community/averages enforces 5-user privacy threshold. server.py is now ~1345 lines and should be modularized next iteration. Note duplicated app.include_router(api) call in server.py.",
+  "rca of the issue": "N/A — no defects found."
+}

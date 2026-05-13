@@ -19,6 +19,7 @@ import Crisis from "./pages/Crisis";
 import Reports from "./pages/Reports";
 import ShareLinks from "./pages/ShareLinks";
 import SharedView from "./pages/SharedView";
+import Milestones from "./pages/Milestones";
 
 const Private = ({ children }) => {
     const { user, loading } = useAuth();
@@ -52,6 +53,7 @@ function App() {
                             <Route path="meds" element={<Medications />} />
                             <Route path="reports" element={<Reports />} />
                             <Route path="share" element={<ShareLinks />} />
+                            <Route path="milestones" element={<Milestones />} />
                             <Route path="glossary" element={<Glossary />} />
                             <Route path="crisis" element={<Crisis />} />
                             <Route path="profile" element={<Profile />} />

@@ -1,6 +1,6 @@
 import React from "react";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
-import { Anchor, Home, BookOpen, UtensilsCrossed, Camera, Activity, Target, BookText, LogOut, Pill, UserCircle, LifeBuoy, FileDown, Share2 } from "lucide-react";
+import { Anchor, Home, BookOpen, UtensilsCrossed, Camera, Activity, Target, BookText, LogOut, Pill, UserCircle, LifeBuoy, FileDown, Share2, Award } from "lucide-react";
 import { useAuth } from "../lib/auth";
 
 const NAV = [
@@ -11,6 +11,7 @@ const NAV = [
     { to: "/app/blood", label: "Blood Tests", icon: Activity },
     { to: "/app/meds", label: "Medications", icon: Pill },
     { to: "/app/goals", label: "Weekly Goals", icon: Target },
+    { to: "/app/milestones", label: "Milestones", icon: Award },
     { to: "/app/reports", label: "Reports", icon: FileDown },
     { to: "/app/share", label: "Share", icon: Share2 },
     { to: "/app/glossary", label: "Glossary", icon: BookText },
