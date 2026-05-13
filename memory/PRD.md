@@ -46,24 +46,28 @@
 ## Implemented (2026-02 / Iteration 2 — P1)
 - ✅ Editable profile: name, sobriety_start, height_cm, weight_kg + change-password
 - ✅ Medication tracker: CRUD + daily check-offs with upsert + cascade delete on logs
-- ✅ AI Weekly Insights via Claude Sonnet 4.5 — warm reflective summary of diary + diet + meds + goals + sobriety; cached per week
-- ✅ Sidebar nav adds Medications + Profile
-- ✅ Dashboard adds WeeklyInsight card
-- ✅ 30/30 backend tests passing (19 regression + 11 new)
-- ✅ Fix: PATCH /users/me invalid date now returns 422 (not 500)
+- ✅ AI Weekly Insights via Claude Sonnet 4.5
+- ✅ 30/30 backend tests passing
+
+## Implemented (2026-02 / Iteration 3 — P2)
+- ✅ Crisis hotlines: US (5 lines) + UK (6 lines); region-aware
+- ✅ Region selector in Profile (Both / US / UK)
+- ✅ Persistent "Need help now?" link in sidebar (accent color, always visible)
+- ✅ Clinician-export PDF reports (`reportlab`): period (week/month) × scope (clinical/full/personal)
+- ✅ Reports page with selectors + download flow
+- ✅ 43/43 backend tests passing (43 = 19 iter1 + 11 iter2 + 13 iter3)
+- ✅ Fix: region='' (Both) clear flow
 
 ## Prioritized Backlog
-**P1 (DONE)** ~~AI weekly insights, editable profile, medication tracker~~. Email reminders (Resend) deferred — needs API key.
-
-**P2 (next)**
-- Clinician-export PDF (week/month report)
+**P3 (next)**
 - Sponsor read-only view via expiring shareable token link
-- Crisis hotline integration (region-aware)
+- Email reminders (Resend) — needs API key from user
+- Mood-vs-diet correlation chart
 
-**P3 (later)**
-- Email reminders (Resend) — needs key
+**P4 (later)**
 - Sora-2 / image-based shareable weekly recap
 - AI insights weekly email digest
+- Mobile PWA install + push notifications
 
 ## Next Action Items
 - Get user feedback on first build

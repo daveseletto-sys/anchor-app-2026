@@ -36,7 +36,7 @@ const Profile = () => {
                 sobriety_start: form.sobriety_start || null,
                 height_cm: form.height_cm === "" ? null : parseFloat(form.height_cm),
                 weight_kg: form.weight_kg === "" ? null : parseFloat(form.weight_kg),
-                region: form.region || null,
+                region: form.region,
             };
             const { data } = await api.patch("/users/me", payload);
             setUser(data);
