@@ -160,6 +160,12 @@ const Landing = () => {
                             );
                         })}
                     </div>
+
+                    <div className="mt-10 pt-6 border-t border-border flex flex-wrap gap-5 text-xs text-muted-foreground">
+                        <a href="/privacy" className="hover:text-primary" data-testid="landing-privacy-link">Privacy</a>
+                        <a href="/support" className="hover:text-primary" data-testid="landing-support-link">Support</a>
+                        <a href="mailto:support@anchorhelp.com.au" className="hover:text-primary">Contact</a>
+                    </div>
                 </div>
             </div>
         </div>

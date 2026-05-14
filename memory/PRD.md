@@ -60,12 +60,27 @@
 - ✅ 63/63 backend tests passing
 
 ## Implemented (2026-02 / Iteration 5 — P4)
-- ✅ Email PDF report to doctor (Resend integration, test sender)
-- ✅ Email weekly AI insight digest to user's own email
-- ✅ Personal Milestones page (replaces requested competitive leaderboard — concerns flagged and discussed; built safer alternative)
-- ✅ Anonymous community averages (5-user privacy threshold)
-- ✅ Resend test-mode error converted to friendly 400 with guidance
-- ✅ 76/76 backend tests passing (13 new + 63 regression)
+- ✅ Email PDF report to doctor (Resend)
+- ✅ Email weekly AI insight digest
+- ✅ Personal Milestones page + anonymous community averages
+- ✅ 76/76 backend tests passing
+
+## Implemented (2026-02 / App Store Prep)
+- ✅ `GET /api/version` endpoint for mobile compatibility checks
+- ✅ `/app/memory/API_CONTRACT.md` — full contract for Mobile Agent
+- ✅ `/app/memory/APP_STORE_METADATA.md` — short/long description, SKU `au.com.anchorhelp.anchor`, keywords, age rating, review notes
+- ✅ `/privacy` route — Apple-grade Privacy Policy (GDPR/CCPA/AU Privacy Principles aware, alcohol-recovery specific)
+- ✅ `/support` route — 12-question FAQ + crisis banner + contact CTA
+- ✅ Footer links on Landing page (Privacy, Support, Contact)
+- ✅ Cleaned requirements.txt from 127 lines → 13 (deployment fix)
+- ✅ Bounded milestones queries (last 365 days + explicit `.limit()`)
+
+## Remaining Before App Store Submission (user actions)
+- Click Deploy in Emergent UI to push latest preview to production
+- Complete Apple Developer Program enrollment ($99/year, 1–7 days)
+- Verify Resend domain `anchorhelp.com.au` DNS (still pending)
+- Switch to Emergent Mobile Agent and rebuild as Expo/React Native, reusing existing backend
+- Generate 6 iOS screenshots (6.7" iPhone, 1290×2796px)
 
 ## Recovery Safety Decision (logged)
 Per user request "monthly competition page for best performers by stats", flagged with user that ranking/competition is contra-indicated in alcohol recovery research (AA/SMART explicitly avoid it). Built instead:
