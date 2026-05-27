@@ -23,7 +23,7 @@ from auth import (  # noqa: E402
     get_current_user,
 )
 from llm_service import analyze_food_label, analyze_blood_test, generate_weekly_insight  # noqa: E402
-from glossary_data import GLOSSARY  # noqa: E402
+from glossary_data import GLOSSARY, GENERAL_SOURCES, MEDICAL_DISCLAIMER  # noqa: E402
 from hotlines_data import HOTLINES  # noqa: E402
 from pdf_report import build_report_pdf  # noqa: E402
 from fastapi.responses import Response  # noqa: E402
@@ -500,6 +500,12 @@ async def glossary():
     return {"items": GLOSSARY}
 
 
+@api.get("/sources")
+async def sources():
+    """Public list of medical sources used across the app (Apple Guideline 1.4.1 compliance)."""
+    return {"sources": GENERAL_SOURCES, "disclaimer": MEDICAL_DISCLAIMER}
+
+
 # -------- Dashboard --------
 
 @api.get("/dashboard")
@@ -591,6 +597,30 @@ async def change_password(payload: PasswordChange, current=Depends(get_current_u
         {"$set": {"password_hash": hash_password(payload.new_password)}},
     )
     return {"ok": True}
+
+
+@api.delete("/users/me")
+async def delete_account(current=Depends(get_current_user)):
+    """Permanently delete the current user and ALL associated data.
+
+    Apple App Store Guideline 5.1.1(v) — apps that allow account creation must
+    also offer in-app account deletion that removes the user's data.
+    """
+    uid = current["id"]
+    # Cascade-delete every collection that references this user.
+    await db.diary.delete_many({"user_id": uid})
+    await db.meals.delete_many({"user_id": uid})
+    await db.blood_tests.delete_many({"user_id": uid})
+    await db.medications.delete_many({"user_id": uid})
+    await db.med_logs.delete_many({"user_id": uid})
+    await db.goals.delete_many({"user_id": uid})
+    await db.weekly_insights.delete_many({"user_id": uid})
+    await db.share_links.delete_many({"user_id": uid})
+    # User document last
+    res = await db.users.delete_one({"id": uid})
+    if res.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Account not found")
+    return {"ok": True, "deleted": True}
 
 
 # -------- Medications --------

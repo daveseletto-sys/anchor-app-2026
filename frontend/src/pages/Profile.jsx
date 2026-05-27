@@ -4,14 +4,19 @@ import { useAuth } from "../lib/auth";
 import { Input } from "../components/ui/input";
 import { Button } from "../components/ui/button";
 import { toast } from "sonner";
-import { Save, KeyRound } from "lucide-react";
+import { Save, KeyRound, AlertTriangle, Trash2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const Profile = () => {
-    const { user, setUser } = useAuth();
+    const { user, setUser, logout } = useAuth();
+    const navigate = useNavigate();
     const [form, setForm] = useState({ name: "", sobriety_start: "", height_cm: "", weight_kg: "", region: "" });
     const [pwForm, setPwForm] = useState({ current_password: "", new_password: "" });
     const [saving, setSaving] = useState(false);
     const [changingPw, setChangingPw] = useState(false);
+    const [showDelete, setShowDelete] = useState(false);
+    const [deleteConfirm, setDeleteConfirm] = useState("");
+    const [deleting, setDeleting] = useState(false);
 
     useEffect(() => {
         if (user) {
@@ -63,6 +68,23 @@ const Profile = () => {
             toast.error(err?.response?.data?.detail || "Could not update password");
         } finally {
             setChangingPw(false);
+        }
+    };
+
+    const deleteAccount = async () => {
+        if (deleteConfirm !== "DELETE") {
+            toast.error("Type DELETE to confirm");
+            return;
+        }
+        setDeleting(true);
+        try {
+            await api.delete("/users/me");
+            toast.success("Your account and all data have been deleted.");
+            logout();
+            navigate("/", { replace: true });
+        } catch (err) {
+            toast.error(err?.response?.data?.detail || "Could not delete account");
+            setDeleting(false);
         }
     };
 

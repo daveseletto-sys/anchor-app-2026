@@ -67,6 +67,10 @@ const DietTracker = () => {
         <div className="max-w-5xl mx-auto fade-up" data-testid="diet-root">
             <div className="label-eyebrow">Diet tracker</div>
             <h1 className="font-display text-4xl sm:text-5xl font-light tracking-tight mt-1">What did you eat today?</h1>
+            <p className="text-xs text-muted-foreground mt-3 max-w-2xl">
+                Default targets shown here (protein, salt, water) follow general guidance from the WHO, NHMRC and EFSA. Recovery-specific targets vary — always confirm with your clinician.{" "}
+                <a href="/sources" className="text-primary underline">View sources</a>
+            </p>
 
             {/* Progress bars */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mt-10">

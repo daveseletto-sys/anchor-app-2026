@@ -69,7 +69,7 @@ const Support = () => (
                     <p>Open <strong>Profile</strong> in the side menu → update the <em>Sobriety start date</em> field → click <em>Save changes</em>. Your streak counter recalculates immediately.</p>
                 </Faq>
                 <Faq q="Can I delete my account and all my data?">
-                    <p>Yes. Email <a className="text-primary underline" href="mailto:support@anchorhelp.com.au">support@anchorhelp.com.au</a> from your registered address and ask for account deletion. We'll remove all your data within 30 days and confirm by email.</p>
+                    <p>Yes — and it's self-service. Open <strong>Profile</strong> → scroll to the <em>Delete account</em> section → type <code>DELETE</code> to confirm. Your account and every piece of data attached to it (diary entries, meals, blood tests, medications, goals, AI reflections, share links) are removed immediately and permanently. If you'd rather have help, email <a className="text-primary underline" href="mailto:support@anchorhelp.com.au">support@anchorhelp.com.au</a>.</p>
                 </Faq>
                 <Faq q="Is Anchor free?">
                     <p>Yes — Anchor is free to use. We may add a Pro tier in the future, but everything you see today will remain free.</p>

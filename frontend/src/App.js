@@ -22,6 +22,7 @@ import SharedView from "./pages/SharedView";
 import Milestones from "./pages/Milestones";
 import Privacy from "./pages/Privacy";
 import Support from "./pages/Support";
+import Sources from "./pages/Sources";
 
 const Private = ({ children }) => {
     const { user, loading } = useAuth();
@@ -47,6 +48,7 @@ function App() {
                         <Route path="/share/:token" element={<SharedView />} />
                         <Route path="/privacy" element={<Privacy />} />
                         <Route path="/support" element={<Support />} />
+                        <Route path="/sources" element={<Sources />} />
                         <Route path="/app" element={<Private><AppShell /></Private>}>
                             <Route index element={<Dashboard />} />
                             <Route path="diary" element={<Diary />} />

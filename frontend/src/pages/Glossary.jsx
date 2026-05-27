@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { api } from "../lib/api";
 import { Input } from "../components/ui/input";
-import { Search } from "lucide-react";
+import { Search, ExternalLink } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const Glossary = () => {
     const [items, setItems] = useState([]);
@@ -57,12 +58,32 @@ const Glossary = () => {
                                 <div key={it.term} className="border-b border-border pb-4 last:border-0" data-testid={`glossary-term-${it.term}`}>
                                     <div className="font-display font-medium tracking-tight">{it.term}</div>
                                     <p className="text-sm text-muted-foreground mt-1 leading-relaxed">{it.definition}</p>
+                                    {it.source_name && (
+                                        <a
+                                            href={it.source_url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-xs text-primary hover:underline inline-flex items-center gap-1 mt-2"
+                                            data-testid={`glossary-source-${it.term}`}
+                                        >
+                                            Source: {it.source_name} <ExternalLink className="w-3 h-3" strokeWidth={1.5} />
+                                        </a>
+                                    )}
                                 </div>
                             ))}
                         </div>
                     </section>
                 ))}
                 {grouped.length === 0 && <div className="text-sm text-muted-foreground">No matches.</div>}
+            </div>
+
+            <div className="mt-12 pt-6 border-t border-border">
+                <Link to="/sources" className="text-sm text-primary hover:underline inline-flex items-center gap-1" data-testid="glossary-all-sources-link">
+                    View all medical sources <ExternalLink className="w-3 h-3" strokeWidth={1.5} />
+                </Link>
+                <p className="text-xs text-muted-foreground mt-2 max-w-xl">
+                    Anchor is a self-tracking tool — not a substitute for medical advice. Always consult a qualified clinician about your personal health.
+                </p>
             </div>
         </div>
     );

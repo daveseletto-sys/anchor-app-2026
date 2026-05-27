@@ -53,7 +53,7 @@ const Privacy = () => (
             <P>Your data is stored in MongoDB Atlas (managed cloud database). Outbound emails (digests, reports to your doctor) are sent via Resend. We do not sell, rent, or share your data with advertisers.</P>
 
             <H2>7. Retention &amp; deletion</H2>
-            <P>Your data is kept as long as your account is active. You can email <a className="text-primary underline" href="mailto:support@anchorhelp.com.au">support@anchorhelp.com.au</a> at any time to request <strong>full account deletion</strong> — we will remove all your data within 30 days and confirm via email. You can also export everything yourself: open the app, go to Reports, and download a "Full" PDF.</P>
+            <P>Your data is kept as long as your account is active. You can delete your account at any time from within the app — open <strong>Profile → Delete account</strong>, type DELETE to confirm, and we will immediately and permanently remove your account along with every piece of data linked to it (diary entries, meals, blood tests, medications, goals, AI reflections, and share links). No 30-day waiting period; deletion is irreversible. You can also email <a className="text-primary underline" href="mailto:support@anchorhelp.com.au">support@anchorhelp.com.au</a> if you'd prefer assisted deletion. To take a copy of your data with you, generate a "Full" PDF report from the Reports page before deleting.</P>
 
             <H2>8. Children</H2>
             <P>Anchor is intended for adults (17+). It is not designed for or directed at children, and we do not knowingly collect data from anyone under 17. If you believe a minor has created an account, please contact us and we will delete the account immediately.</P>
