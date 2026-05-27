@@ -50,7 +50,9 @@ const Reports = () => {
             });
             if (!res.ok) {
                 let detail = "Could not generate report";
-                try { detail = (await res.json()).detail || detail; } catch (_) { /* ignore */ }
+                try { detail = (await res.json()).detail || detail; } catch (parseErr) {
+                    console.error("Failed to parse error response:", parseErr);
+                }
                 throw new Error(detail);
             }
             const disposition = res.headers.get("Content-Disposition") || "";

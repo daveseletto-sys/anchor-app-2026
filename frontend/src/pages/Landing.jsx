@@ -149,10 +149,10 @@ const Landing = () => {
                     </div>
 
                     <div className="mt-16 grid grid-cols-2 gap-4">
-                        {FEATURES.slice(0, 4).map((f, i) => {
+                        {FEATURES.slice(0, 4).map((f) => {
                             const Icon = f.icon;
                             return (
-                                <div key={i} className="text-xs text-muted-foreground">
+                                <div key={f.title} className="text-xs text-muted-foreground">
                                     <Icon className="w-4 h-4 text-primary mb-2" strokeWidth={1.5} />
                                     <div className="font-medium text-foreground">{f.title}</div>
                                     <div className="mt-1 leading-relaxed">{f.body}</div>

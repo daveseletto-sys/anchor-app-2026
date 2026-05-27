@@ -7,9 +7,9 @@ load_dotenv("/app/backend/.env")
 
 BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://progress-hub-256.preview.emergentagent.com").rstrip("/")
 
-TEST_EMAIL = "tester@anchor.app"
-TEST_PASSWORD = "Anchor!2026"
-TEST_NAME = "Riley"
+TEST_EMAIL = os.environ.get("ANCHOR_TEST_EMAIL", "tester@anchor.app")
+TEST_PASSWORD = os.environ.get("ANCHOR_TEST_PASSWORD", "Anchor!2026")
+TEST_NAME = os.environ.get("ANCHOR_TEST_NAME", "Riley")
 
 
 @pytest.fixture(scope="session")
