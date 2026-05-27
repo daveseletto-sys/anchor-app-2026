@@ -160,6 +160,63 @@ const Profile = () => {
                     {changingPw ? "Updating…" : "Update password"}
                 </Button>
             </form>
+
+            <div className="tactile-card p-6 sm:p-8 mt-6 border-destructive/30" data-testid="delete-account-section">
+                <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-destructive" strokeWidth={1.5} />
+                    <h2 className="font-display text-xl font-medium tracking-tight">Delete account</h2>
+                </div>
+                <p className="text-sm text-muted-foreground mt-3 leading-relaxed">
+                    Permanently delete your Anchor account and every piece of data tied to it — diary entries, meals, blood tests, medications, goals, AI reflections, and share links. This is immediate and cannot be undone. If you'd like a copy of your data first, generate a Full PDF report from the Reports page.
+                </p>
+
+                {!showDelete ? (
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setShowDelete(true)}
+                        data-testid="delete-account-open-btn"
+                        className="mt-5 rounded-full px-6 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    >
+                        <Trash2 className="w-4 h-4 mr-1.5" strokeWidth={1.5} /> Delete my account
+                    </Button>
+                ) : (
+                    <div className="mt-5 space-y-4">
+                        <div>
+                            <label className="label-eyebrow">Type <span className="font-mono text-destructive">DELETE</span> to confirm</label>
+                            <Input
+                                data-testid="delete-account-confirm-input"
+                                value={deleteConfirm}
+                                onChange={(e) => setDeleteConfirm(e.target.value)}
+                                placeholder="DELETE"
+                                className="mt-2"
+                            />
+                        </div>
+                        <div className="flex gap-3">
+                            <Button
+                                type="button"
+                                onClick={deleteAccount}
+                                disabled={deleting || deleteConfirm !== "DELETE"}
+                                data-testid="delete-account-confirm-btn"
+                                className="rounded-full px-6 bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                                <Trash2 className="w-4 h-4 mr-1.5" strokeWidth={1.5} />
+                                {deleting ? "Deleting…" : "Permanently delete"}
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                onClick={() => { setShowDelete(false); setDeleteConfirm(""); }}
+                                disabled={deleting}
+                                data-testid="delete-account-cancel-btn"
+                                className="rounded-full px-6"
+                            >
+                                Cancel
+                            </Button>
+                        </div>
+                    </div>
+                )}
+            </div>
         </div>
     );
 };

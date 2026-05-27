@@ -1,5 +1,8 @@
 # Anchor — Recovery Companion (PRD)
 
+## Recent Fix (2026-02)
+- **Profile → Delete account UI restored.** The JSX for the cascade-delete section was missing from `Profile.jsx` though the backend (`DELETE /api/users/me`) and the handler function were present. Re-added the visible "Delete account" card with confirm-typing flow. Required for Apple App Store compliance. Needs redeploy to production.
+
 ## Original Problem Statement
 "build me an app for alcoholics to monitor there progress diet, blood test results, food label reader, weekly goals, daily diary on progress with a daily rating on how they have done for the day min protein intake 140mg daily no more than 2mg salt no more than 1.5 litres of water a day. glossary of terms inc"
 
