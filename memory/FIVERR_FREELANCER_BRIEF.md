@@ -169,6 +169,67 @@ Contact for any review questions: support@anchorhelp.com.au
 - **Loading state of 5–25 seconds** on AI calls (food label, blood test extract, weekly insight)
 - **Cold-start version check** against `/api/version` (handle 404 gracefully)
 
+## How to build & upload the `.ipa` (step by step)
+
+This is the bit that gets the app onto App Store Connect for review. Here's the full path for someone wrapping the web app (Capacitor) or a freshly built React Native / Expo app — pick the one that matches your stack.
+
+### Prerequisites (one-time setup)
+- A **Mac** with the **latest Xcode** installed (free from the Mac App Store)
+- An **Apple Developer Program** membership on the owner's account (US$99/yr — already paid by the buyer)
+- Owner adds you as a **Developer** (or **App Manager**) in App Store Connect → Users and Access
+- In Xcode → Settings → Accounts: sign in with your Apple ID that's linked to the team
+
+### A. If you're using **Capacitor** (wrapping the existing web app)
+1. In the project folder:
+   ```bash
+   yarn build              # builds the React app
+   npx cap sync ios        # copies the build into the iOS native project
+   npx cap open ios        # opens Xcode
+   ```
+2. In Xcode, select the **App** target → **Signing & Capabilities**:
+   - Team: select the buyer's Apple Developer team
+   - Bundle Identifier: `au.com.anchorhelp.anchor`
+   - "Automatically manage signing" → checked
+3. Set the **Version** (e.g. `1.0.0`) and **Build** number (e.g. `1`) under General.
+4. Drop the 1024×1024 icon into `Assets.xcassets → AppIcon` (and the smaller sizes).
+5. Top bar device picker → choose **"Any iOS Device (arm64)"** (not a simulator — Archive is greyed out on simulators).
+6. **Product → Archive** (takes 1–5 min).
+7. When the Organizer opens → select the new archive → **Distribute App** → **App Store Connect** → **Upload** → keep defaults → **Next** → **Upload**.
+8. After ~5–15 min the build appears in App Store Connect → **TestFlight** tab. Add it to a test group, install via TestFlight on a real iPhone, smoke-test the flows in the checklist below.
+9. Once happy → App Store Connect → **App Store** tab → fill metadata (use the strings earlier in this doc) → **Add Build** → pick your uploaded build → **Submit for Review**.
+
+### B. If you're using **React Native (bare) or Expo (prebuild)**
+Same as above, except instead of `npx cap open ios`:
+```bash
+# React Native bare
+cd ios && pod install && cd ..
+open ios/Anchor.xcworkspace
+# Expo
+npx expo prebuild -p ios
+open ios/Anchor.xcworkspace
+```
+Then continue from step 2 onwards. **Always open the `.xcworkspace`, not the `.xcodeproj`.**
+
+### C. Alternative: upload `.ipa` via **Transporter** (instead of Xcode's Upload button)
+1. In Xcode Organizer, after Archive → **Distribute App** → **App Store Connect** → **Export** → save the `.ipa` locally.
+2. Open the free **Transporter** app (Mac App Store) → sign in with the buyer's Apple ID → drag the `.ipa` in → **Deliver**.
+3. Same as above — build shows up in App Store Connect → TestFlight.
+
+### Common gotchas (please double-check before submitting)
+- **Provisioning profile mismatch:** make sure the bundle ID `au.com.anchorhelp.anchor` exists under Certificates, Identifiers & Profiles → Identifiers in the Apple Developer portal. Xcode can create it for you with "Automatically manage signing".
+- **Missing `NSCameraUsageDescription` / `NSPhotoLibraryUsageDescription`** in `Info.plist` — the Food Label and Blood Test screens use the camera/library. Apple rejects builds without these strings. Suggested copy:
+  - Camera: *"Anchor uses the camera to scan food labels and lab reports so you can log nutrition and blood markers."*
+  - Photo Library: *"Anchor reads photos of food labels and lab reports you choose to upload."*
+- **Encryption export compliance:** in `Info.plist` add `ITSAppUsesNonExemptEncryption = NO` (the app only uses HTTPS, which is exempt).
+- **App Transport Security:** no exceptions needed — the backend is HTTPS. Do **not** add `NSAllowsArbitraryLoads`.
+- **17+ age rating** — set "Frequent/Intense Mature/Suggestive Themes" → Frequent/Intense (because of alcohol references).
+- **First upload to a new bundle ID** can take 30 min to appear in TestFlight — don't panic.
+
+### Build numbers when re-submitting after rejection
+- You can re-use the same **Version** (e.g. `1.0.0`) but the **Build** number must always increase (e.g. `1` → `2` → `3`). Xcode complains otherwise.
+
+---
+
 ## Deliverables I'm expecting
 
 1. iOS app `.ipa` uploaded to App Store Connect via Transporter (or built directly through Xcode → Archive → Upload)
