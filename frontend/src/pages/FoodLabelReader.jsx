@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { api, fileToBase64, todayStr } from "../lib/api";
+import { api, imageFileToJpegBase64, todayStr } from "../lib/api";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { toast } from "sonner";
@@ -15,10 +15,6 @@ const FoodLabelReader = () => {
 
     const onFile = async (file) => {
         if (!file) return;
-        if (!/^image\/(jpeg|png|webp)$/i.test(file.type)) {
-            toast.error("Please use JPG, PNG, or WEBP");
-            return;
-        }
         const reader = new FileReader();
         reader.onload = () => setPreview(reader.result);
         reader.readAsDataURL(file);
@@ -26,12 +22,19 @@ const FoodLabelReader = () => {
         setExtracting(true);
         setResult(null);
         try {
-            const b64 = await fileToBase64(file);
+            const b64 = await imageFileToJpegBase64(file);
             const { data } = await api.post("/food-label/analyze", { image_base64: b64 });
             setResult(data);
-            toast.success("Label analyzed");
+            const hasData = data && (data.name || data.protein_g || data.calories || data.salt_g);
+            if (hasData) {
+                toast.success("Label analyzed — review and log");
+            } else {
+                toast.message("We couldn't read that label clearly", {
+                    description: "Try a closer, glare-free photo of the nutrition panel — or edit the fields manually before logging.",
+                });
+            }
         } catch (err) {
-            toast.error(err?.response?.data?.detail || "Could not analyze");
+            toast.error(err?.response?.data?.detail || err?.message || "Could not analyze");
         } finally {
             setExtracting(false);
         }
@@ -88,7 +91,7 @@ const FoodLabelReader = () => {
                         id="food-upload"
                         data-testid="food-upload-input"
                         type="file"
-                        accept="image/png,image/jpeg,image/webp"
+                        accept="image/*"
                         className="hidden"
                         onChange={(e) => onFile(e.target.files?.[0])}
                     />

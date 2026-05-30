@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { api, fileToBase64, todayStr } from "../lib/api";
+import { api, imageFileToJpegBase64, todayStr } from "../lib/api";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Textarea } from "../components/ui/textarea";
@@ -43,28 +43,29 @@ const BloodTests = () => {
 
     const onExtract = async (file) => {
         if (!file) return;
-        if (!/^image\/(jpeg|png|webp)$/i.test(file.type)) {
-            toast.error("Please use JPG, PNG, or WEBP");
-            return;
-        }
         setExtracting(true);
         try {
-            const b64 = await fileToBase64(file);
+            const b64 = await imageFileToJpegBase64(file);
             const { data } = await api.post("/blood-tests/extract", { image_base64: b64 });
             if (data.date) setDate(data.date.slice(0, 10));
             if (data.lab) setLab(data.lab);
             if (data.notes) setNotes(data.notes);
-            if (Array.isArray(data.markers) && data.markers.length > 0) {
-                setMarkers(data.markers.map((m) => ({
+            const found = Array.isArray(data.markers) ? data.markers : [];
+            if (found.length > 0) {
+                setMarkers(found.map((m) => ({
                     name: m.name || "",
                     value: m.value ?? "",
                     unit: m.unit || "",
                     reference_range: m.reference_range || "",
                 })));
+                toast.success(`Extracted ${found.length} marker${found.length === 1 ? "" : "s"} — review and save`);
+            } else {
+                toast.message("We couldn't read markers from that photo", {
+                    description: "Try a clearer, well-lit photo of the results table, or enter the markers manually below.",
+                });
             }
-            toast.success(`Extracted ${data.markers?.length || 0} markers`);
         } catch (err) {
-            toast.error(err?.response?.data?.detail || "Extraction failed");
+            toast.error(err?.response?.data?.detail || err?.message || "Extraction failed");
         } finally {
             setExtracting(false);
         }
@@ -146,7 +147,7 @@ const BloodTests = () => {
                                 {extracting ? "Extracting…" : "Upload report image (AI will fill the form)"}
                                 <input
                                     type="file"
-                                    accept="image/png,image/jpeg,image/webp"
+                                    accept="image/*"
                                     className="hidden"
                                     data-testid="blood-extract-input"
                                     onChange={(e) => onExtract(e.target.files?.[0])}

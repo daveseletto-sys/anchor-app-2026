@@ -31,3 +31,56 @@ export const fileToBase64 = (file) =>
         reader.onerror = reject;
         reader.readAsDataURL(file);
     });
+
+/**
+ * Convert any image file (JPG/PNG/WEBP/HEIC/HEIF) to a JPEG base64 string.
+ * Decodes via the browser (iOS Safari/WKWebView handles HEIC natively),
+ * draws to canvas, downscales so the longest side <= maxSide, re-encodes as JPEG.
+ * Returns a base64 string (no data: prefix).
+ */
+export const imageFileToJpegBase64 = (file, { maxSide = 1600, quality = 0.85 } = {}) =>
+    new Promise((resolve, reject) => {
+        if (!file) {
+            reject(new Error("No file"));
+            return;
+        }
+        const dataReader = new FileReader();
+        dataReader.onerror = () => reject(new Error("Could not read file"));
+        dataReader.onload = () => {
+            const img = new Image();
+            img.onerror = () => {
+                // Fallback: send the original bytes as base64 (some HEICs may not decode in non-Safari browsers)
+                const idx = String(dataReader.result || "").indexOf(",");
+                if (idx >= 0) resolve(String(dataReader.result).slice(idx + 1));
+                else reject(new Error("Image could not be decoded. Try a JPG or PNG."));
+            };
+            img.onload = () => {
+                try {
+                    const w0 = img.naturalWidth || img.width;
+                    const h0 = img.naturalHeight || img.height;
+                    if (!w0 || !h0) {
+                        reject(new Error("Image has no dimensions"));
+                        return;
+                    }
+                    const scale = Math.min(1, maxSide / Math.max(w0, h0));
+                    const w = Math.round(w0 * scale);
+                    const h = Math.round(h0 * scale);
+                    const canvas = document.createElement("canvas");
+                    canvas.width = w;
+                    canvas.height = h;
+                    const ctx = canvas.getContext("2d");
+                    // White background in case source is transparent (improves OCR contrast)
+                    ctx.fillStyle = "#ffffff";
+                    ctx.fillRect(0, 0, w, h);
+                    ctx.drawImage(img, 0, 0, w, h);
+                    const dataUrl = canvas.toDataURL("image/jpeg", quality);
+                    const idx = dataUrl.indexOf(",");
+                    resolve(idx >= 0 ? dataUrl.slice(idx + 1) : dataUrl);
+                } catch (e) {
+                    reject(e);
+                }
+            };
+            img.src = dataReader.result;
+        };
+        dataReader.readAsDataURL(file);
+    });
