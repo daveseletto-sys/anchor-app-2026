@@ -1,0 +1,50 @@
+{
+  "expo": {
+    "name": "Anchor Recovery",
+    "slug": "anchor-recovery",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "anchor",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#F3EDE0"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "au.com.anchorhelp.anchor",
+      "buildNumber": "2",
+      "config": {
+        "usesNonExemptEncryption": false
+      },
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSCameraUsageDescription": "Anchor uses the camera to scan food labels and blood test reports so you can log nutrition and lab markers privately.",
+        "NSPhotoLibraryUsageDescription": "Anchor reads photos of food labels and blood test reports that you choose to upload.",
+        "NSMicrophoneUsageDescription": "Anchor does not record audio. This permission is requested only because the web view supports it; the app never starts a recording.",
+        "NSUserTrackingUsageDescription": "Anchor does not track you across apps or websites."
+      }
+    },
+    "android": {
+      "package": "au.com.anchorhelp.anchor",
+      "versionCode": 2,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#F3EDE0"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-splash-screen"
+    ],
+    "extra": {
+      "appUrl": "https://progress-hub-256.emergent.host",
+      "supportEmail": "support@anchorhelp.com.au"
+    }
+  }
+}
