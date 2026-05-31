@@ -16,21 +16,19 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "au.com.anchorhelp.anchor",
-      "buildNumber": "2",
+      "buildNumber": "6",
       "config": {
         "usesNonExemptEncryption": false
       },
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSCameraUsageDescription": "Anchor uses the camera to scan food labels and blood test reports so you can log nutrition and lab markers privately.",
-        "NSPhotoLibraryUsageDescription": "Anchor reads photos of food labels and blood test reports that you choose to upload.",
-        "NSMicrophoneUsageDescription": "Anchor does not record audio. This permission is requested only because the web view supports it; the app never starts a recording.",
-        "NSUserTrackingUsageDescription": "Anchor does not track you across apps or websites."
+        "NSPhotoLibraryUsageDescription": "Anchor reads photos of food labels and blood test reports that you choose to upload."
       }
     },
     "android": {
       "package": "au.com.anchorhelp.anchor",
-      "versionCode": 2,
+      "versionCode": 6,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#F3EDE0"
