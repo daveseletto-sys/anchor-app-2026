@@ -1,7 +1,17 @@
 # Anchor — Recovery Companion (PRD)
 
-## Recent Fix (2026-02)
-- **Profile → Delete account UI restored.** The JSX for the cascade-delete section was missing from `Profile.jsx` though the backend (`DELETE /api/users/me`) and the handler function were present. Re-added the visible "Delete account" card with confirm-typing flow. Required for Apple App Store compliance. Needs redeploy to production.
+## Latest Status (2026-02 / June 2026)
+
+### iOS App Store — Mid-Submission
+- **Web app (production):** Fully working — `https://progress-hub-256.emergent.host`
+- **iOS app:** Native Expo + WebView shell at `/app/mobile/` — Build 5 submitted to Apple (currently "Processing"), Build 6/7 needed because Apple flagged `NSUserTrackingUsageDescription` in plist
+- **Build 7 (in flight):** Queued on EAS free tier, removed tracking key, bumped buildNumber to 6, awaiting cloud build slot
+- **App Store credentials in App Review Information:** ⚠️ Was set to `demo@anchor.app/demo1234` (didn't exist on prod, caused first reviewer to fail login). Now changed to working `tester@anchor.app/Anchor!2026`.
+
+### Recent Fixes (2026-02)
+- **Blood Test & Food Label scanners now accept any image format** — fixed `BloodTests.jsx` and `FoodLabelReader.jsx` to accept `image/*` (was restricted to JPG/PNG/WEBP), added `imageFileToJpegBase64()` helper in `api.js` that converts HEIC/HEIF → JPEG client-side. Addresses Apple Guideline 2.1(a) rejection.
+- **Profile → Delete account UI** restored (JSX was missing despite handler existing). Required for Apple 5.1.1(v).
+- **Created entire Expo iOS app** at `/app/mobile/` with native splash, native crisis-call FAB (region-aware), offline detection, haptics, WebView wrapper pointing at production URL. Submitted as Build 5.
 
 ## Original Problem Statement
 "build me an app for alcoholics to monitor there progress diet, blood test results, food label reader, weekly goals, daily diary on progress with a daily rating on how they have done for the day min protein intake 140mg daily no more than 2mg salt no more than 1.5 litres of water a day. glossary of terms inc"
