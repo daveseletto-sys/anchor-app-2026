@@ -47,7 +47,7 @@ const Sources = () => {
                 </div>
 
                 <h2 className="font-display text-2xl font-medium tracking-tight mt-12 mb-3">In-app citations</h2>
-                <p className="text-sm text-muted-foreground mb-4">Every medical term in the in-app <Link to="/app/glossary" className="text-primary underline">Glossary</Link> is tagged with its source — tap any term to see the publishing organisation and a link to the original page.</p>
+                <p className="text-sm text-muted-foreground mb-4">Every term in the in-app <Link to="/app/glossary" className="text-primary underline">Glossary</Link> links to the public information source it came from — tap any term to see the publishing organisation and a link to the original page. Anchor does not interpret medical information or provide medical advice.</p>
 
                 <div className="text-xs text-muted-foreground mt-12 pt-6 border-t border-border flex flex-wrap gap-6">
                     <Link to="/" className="hover:text-primary">Home</Link>

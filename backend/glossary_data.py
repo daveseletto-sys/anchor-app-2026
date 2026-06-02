@@ -87,11 +87,11 @@ GENERAL_SOURCES = [
     {"name": "Lifeline (Australia)", "url": "https://www.lifeline.org.au/", "purpose": "24/7 crisis support in Australia (13 11 14)."},
 ]
 
-# Medical disclaimer text shown across the app
+# Disclaimer text shown across the app
 MEDICAL_DISCLAIMER = (
-    "Anchor is a self-tracking tool. It does not provide medical advice, diagnosis, or treatment. "
-    "Information shown in the app — including blood test reference ranges, dietary targets, and "
-    "glossary definitions — is drawn from public health sources and is for educational reference only. "
-    "Always consult a qualified clinician about your personal health, medication, and diet. "
-    "If you are in crisis, use the in-app Crisis page or call your local emergency number."
+    "Anchor is a personal wellness journal. It is not a medical app and does not provide medical advice, "
+    "diagnosis, or treatment. The dietary targets, glossary definitions, and document scanner are general "
+    "wellness references drawn from public sources — not personalised health guidance. Always consult a "
+    "qualified clinician about your personal health, medication, and diet. If you are in crisis, use the "
+    "in-app Crisis page or call your local emergency number."
 )

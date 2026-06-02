@@ -10,7 +10,7 @@ const FEATURES = [
     { icon: Heart, title: "Daily reflection", body: "Rate your day 1–10 with mood tags and a private journal." },
     { icon: Activity, title: "Diet that supports recovery", body: "Track protein, salt, and water against recovery-friendly targets." },
     { icon: Camera, title: "AI food label reader", body: "Snap a label — get nutrition data extracted instantly." },
-    { icon: BookOpen, title: "Blood test trends", body: "Log ALT, AST, GGT and watch your liver markers heal over time." },
+    { icon: BookOpen, title: "Doctor visit notes", body: "Scan letters or results and keep your own private notes for your next appointment." },
     { icon: Target, title: "Weekly goals", body: "Small, meaningful commitments — one week at a time." },
     { icon: Anchor, title: "Sobriety streak", body: "A quiet, steady counter for the days you've shown up for yourself." },
 ];
@@ -60,7 +60,7 @@ const Landing = () => {
                             then another.
                         </h1>
                         <p className="mt-6 text-white/80 max-w-md font-body text-base sm:text-lg">
-                            Track the small things that rebuild a body — protein, hydration, salt, sleep, mood — and watch your liver markers and your days tell a story of healing.
+                            Track the small things that rebuild a body — protein, hydration, salt, sleep, mood — one calm day at a time.
                         </p>
                     </div>
                     <div className="text-white/60 text-sm">

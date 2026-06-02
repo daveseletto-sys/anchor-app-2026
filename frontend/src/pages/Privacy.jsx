@@ -30,7 +30,7 @@ const Privacy = () => (
             <H2>1. What we collect</H2>
             <P><strong>Account data</strong> — email address, name, hashed password (we never store your plain password).</P>
             <P><strong>Recovery data you choose to log</strong> — sobriety start date, diary entries (date, 1–10 rating, mood tags, free-text notes), meals (protein, salt, water, calories, name), blood test results (markers, values, units, dates), medications (name, dose, schedule, adherence), weekly goals, height, weight, and region.</P>
-            <P><strong>Images you upload</strong> — photos of food labels and blood test reports. These are processed for nutrition / marker extraction (see Section 3) and not retained after extraction completes unless you save the result.</P>
+            <P><strong>Images you upload</strong> — photos of food labels and personal documents. These are processed for text transcription (see Section 3) and not retained after extraction completes unless you save the result.</P>
             <P><strong>Technical data</strong> — IP address (transient, for security), session tokens (stored in your device's local storage), and basic server logs.</P>
             <P>We do <strong>not</strong> collect: precise location, contacts, advertising IDs, browsing history outside the app, social-media profiles, or biometric data.</P>
 
@@ -40,7 +40,7 @@ const Privacy = () => (
             <H2>3. AI processing</H2>
             <P>Two app features send data to third-party AI services:</P>
             <P>• <strong>Food label reader</strong> — your photo is sent to OpenAI (GPT-5.2 vision) via the Emergent Integrations gateway for nutrition extraction. The image is not used to train models.</P>
-            <P>• <strong>Blood test extractor</strong> — your photo is sent to OpenAI (GPT-5.2 vision) for marker extraction. The image is not used to train models. <strong>Do not upload images that contain your full legal name, address, NHS/Medicare number, or other identifying information you don't want to share with a third party.</strong> Crop the image to just the lab results section if you're concerned.</P>
+            <P>• <strong>Document scanner (OCR)</strong> — your photo is sent to OpenAI (GPT-5.2 vision) to transcribe visible text into your private journal. The image is not used to train models. Anchor does not interpret or diagnose the document — it only reads what is written. <strong>Do not upload images that contain your full legal name, address, NHS/Medicare number, or other identifying information you don't want to share with a third party.</strong> Crop the image if you're concerned.</P>
             <P>• <strong>Weekly AI reflection</strong> — your last 7 days of diary, diet, medication adherence, and goal completion (NOT raw identifiers, NOT the diary's free-text notes) are summarised by Anthropic Claude Sonnet 4.5. The reflection text is stored in our database so you can revisit it.</P>
 
             <H2>4. Community averages — anonymous</H2>
@@ -53,7 +53,7 @@ const Privacy = () => (
             <P>Your data is stored in MongoDB Atlas (managed cloud database). Outbound emails (digests, reports to your doctor) are sent via Resend. We do not sell, rent, or share your data with advertisers.</P>
 
             <H2>7. Retention &amp; deletion</H2>
-            <P>Your data is kept as long as your account is active. You can delete your account at any time from within the app — open <strong>Profile → Delete account</strong>, type DELETE to confirm, and we will immediately and permanently remove your account along with every piece of data linked to it (diary entries, meals, blood tests, medications, goals, AI reflections, and share links). No 30-day waiting period; deletion is irreversible. You can also email <a className="text-primary underline" href="mailto:support@anchorhelp.com.au">support@anchorhelp.com.au</a> if you'd prefer assisted deletion. To take a copy of your data with you, generate a "Full" PDF report from the Reports page before deleting.</P>
+            <P>Your data is kept as long as your account is active. You can delete your account at any time from within the app — open <strong>Profile → Delete account</strong>, type DELETE to confirm, and we will immediately and permanently remove your account along with every piece of data linked to it (diary entries, meals, saved documents, medication logs, goals, AI reflections, and share links). No 30-day waiting period; deletion is irreversible. You can also email <a className="text-primary underline" href="mailto:support@anchorhelp.com.au">support@anchorhelp.com.au</a> if you'd prefer assisted deletion. To take a copy of your data with you, generate a "Full" PDF report from the Reports page before deleting.</P>
 
             <H2>8. Children</H2>
             <P>Anchor is intended for adults (17+). It is not designed for or directed at children, and we do not knowingly collect data from anyone under 17. If you believe a minor has created an account, please contact us and we will delete the account immediately.</P>

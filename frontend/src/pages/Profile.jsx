@@ -167,7 +167,7 @@ const Profile = () => {
                     <h2 className="font-display text-xl font-medium tracking-tight">Delete account</h2>
                 </div>
                 <p className="text-sm text-muted-foreground mt-3 leading-relaxed">
-                    Permanently delete your Anchor account and every piece of data tied to it — diary entries, meals, blood tests, medications, goals, AI reflections, and share links. This is immediate and cannot be undone. If you'd like a copy of your data first, generate a Full PDF report from the Reports page.
+                    Permanently delete your Anchor account and every piece of data tied to it — diary entries, meals, saved documents, medication logs, goals, AI reflections, and share links. This is immediate and cannot be undone. If you'd like a copy of your data first, generate a Full PDF report from the Reports page.
                 </p>
 
                 {!showDelete ? (

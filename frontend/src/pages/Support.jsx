@@ -53,11 +53,11 @@ const Support = () => (
                 <Faq q="How does the food label scanner work?">
                     <p>You upload a photo of a nutrition label and AI (OpenAI GPT-5.2 vision) extracts the values — protein, salt, sodium, calories. You confirm or edit the numbers, then add it to today's diet. The photo is not retained after extraction.</p>
                 </Faq>
-                <Faq q="How does the blood test extractor work?">
-                    <p>Same idea — upload a photo of a lab report and AI extracts markers (ALT, AST, GGT, bilirubin, MCV, and others). <strong>Tip:</strong> crop or cover any identifying info (your name, NHS/Medicare number, DOB) before uploading if you'd rather not share that with the AI provider.</p>
+                <Faq q="How does the document scanner work?">
+                    <p>You upload a photo of any document — a letter from your doctor, a printout, a blood pressure log, anything paper — and AI (OpenAI GPT-5.2 vision) transcribes the visible text into your private journal. <strong>Anchor does not interpret or diagnose anything.</strong> It's just a memory aid so you can take notes to your next doctor visit. <strong>Tip:</strong> crop or cover any identifying info (your name, NHS/Medicare number, DOB) before uploading if you'd rather not share that with the AI provider.</p>
                 </Faq>
                 <Faq q="Why do the diet targets say salt ≤ 2g and water ≤ 1.5L?">
-                    <p>These targets follow specific recovery-focused dietary guidance — high protein (≥140g/day) to support liver repair and muscle recovery, low salt to reduce strain on a healing liver, and a water cap to avoid electrolyte imbalance in people with damaged liver function. Always follow your own doctor's recommendation if it differs.</p>
+                    <p>These targets follow widely-published adult dietary guidance — a higher protein focus to support general recovery and muscle repair, lower salt for cardiovascular wellbeing, and a sensible daily fluid range. They're general wellness defaults, not medical prescriptions. Always follow your own doctor's recommendation if it differs.</p>
                 </Faq>
                 <Faq q="How do I email a report to my doctor?">
                     <p>Open <strong>Reports</strong> in the side menu → choose period (week/month) and scope (clinical/full/personal) → fill in your doctor's email and an optional note → click <em>Send report</em>. They'll get a PDF attachment by email; you can reply to that email directly.</p>
@@ -69,7 +69,7 @@ const Support = () => (
                     <p>Open <strong>Profile</strong> in the side menu → update the <em>Sobriety start date</em> field → click <em>Save changes</em>. Your streak counter recalculates immediately.</p>
                 </Faq>
                 <Faq q="Can I delete my account and all my data?">
-                    <p>Yes — and it's self-service. Open <strong>Profile</strong> → scroll to the <em>Delete account</em> section → type <code>DELETE</code> to confirm. Your account and every piece of data attached to it (diary entries, meals, blood tests, medications, goals, AI reflections, share links) are removed immediately and permanently. If you'd rather have help, email <a className="text-primary underline" href="mailto:support@anchorhelp.com.au">support@anchorhelp.com.au</a>.</p>
+                    <p>Yes — and it's self-service. Open <strong>Profile</strong> → scroll to the <em>Delete account</em> section → type <code>DELETE</code> to confirm. Your account and every piece of data attached to it (diary entries, meals, saved documents, medication logs, goals, AI reflections, share links) are removed immediately and permanently. If you'd rather have help, email <a className="text-primary underline" href="mailto:support@anchorhelp.com.au">support@anchorhelp.com.au</a>.</p>
                 </Faq>
                 <Faq q="Is Anchor free?">
                     <p>Yes — Anchor is free to use. We may add a Pro tier in the future, but everything you see today will remain free.</p>

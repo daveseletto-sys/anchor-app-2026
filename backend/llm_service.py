@@ -84,33 +84,36 @@ async def analyze_food_label(image_base64: str) -> dict:
 
 async def analyze_blood_test(image_base64: str) -> dict:
     """
-    Analyze a blood test report image and extract liver markers etc.
-    Returns: { markers: [{ name, value, unit, reference_range }], date, lab, raw_text }
+    Generic document OCR for the Documents feature.
+    Returns extracted text fields the user can save for a doctor visit.
+    No medical interpretation — just OCR + light structuring.
+    Keeps the same output shape for backward compatibility with the existing UI.
     """
     system_message = (
-        "You are a medical lab report extractor. Given a blood test report photo or PDF page, "
-        "extract relevant markers (especially liver markers like ALT/SGPT, AST/SGOT, GGT, "
-        "ALP, total/direct bilirubin, albumin, INR, MCV, and any others present). "
+        "You are a personal document scanner for a private wellness journal app. "
+        "Your job is to OCR the page and extract any clearly visible labelled values "
+        "(e.g. 'Heart rate 72 bpm', 'Weight 78 kg', 'Cholesterol 4.2 mmol/L'). "
+        "You DO NOT interpret, diagnose, or comment on the values. You simply transcribe what is on the page so the user can store a copy in their personal journal to take to their doctor. "
         "Return ONLY valid JSON. Schema: {"
-        "\"date\": string, \"lab\": string, "
-        "\"markers\": [ { \"name\": string, \"value\": number, \"unit\": string, \"reference_range\": string } ], "
-        "\"notes\": string }"
+        "\"date\": string (date on the document if visible, otherwise empty), "
+        "\"lab\": string (name of issuing organisation if visible, otherwise empty), "
+        "\"markers\": [ { \"name\": string, \"value\": number, \"unit\": string, \"reference_range\": string (leave empty — we do not interpret) } ], "
+        "\"notes\": string (a short factual one-line transcription of the document title, e.g. 'Blood pressure log dated 12 Feb') }"
     )
     chat = LlmChat(
         api_key=EMERGENT_LLM_KEY,
-        session_id=f"blood-test-{uuid.uuid4()}",
+        session_id=f"document-scan-{uuid.uuid4()}",
         system_message=system_message,
     ).with_model(MODEL_PROVIDER, MODEL_NAME)
 
     image_content = ImageContent(image_base64=image_base64)
     user_message = UserMessage(
-        text="Extract all lab markers from this blood test report. Return JSON only.",
+        text="OCR this document and extract any clearly labelled values as a transcription. Do not interpret anything. Return JSON only.",
         file_contents=[image_content],
     )
     response = await chat.send_message(user_message)
     data = _extract_json(response)
     markers = data.get("markers") or []
-    # normalize each marker
     norm = []
     for m in markers:
         try:
@@ -118,7 +121,7 @@ async def analyze_blood_test(image_base64: str) -> dict:
                 "name": str(m.get("name", "")).strip(),
                 "value": float(m.get("value") or 0),
                 "unit": str(m.get("unit", "")).strip(),
-                "reference_range": str(m.get("reference_range", "")).strip(),
+                "reference_range": "",  # never returned to UI — we don't interpret
             })
         except Exception:
             continue

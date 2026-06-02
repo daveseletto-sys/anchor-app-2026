@@ -4,24 +4,15 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Textarea } from "../components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../components/ui/tabs";
-import { Trash2, Upload, Loader2, Plus, X } from "lucide-react";
+import { Trash2, Upload, Loader2, Plus, X, FileText } from "lucide-react";
 import { toast } from "sonner";
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 
-const DEFAULT_MARKERS = [
-    { name: "ALT", value: "", unit: "U/L", reference_range: "7–56" },
-    { name: "AST", value: "", unit: "U/L", reference_range: "10–40" },
-    { name: "GGT", value: "", unit: "U/L", reference_range: "9–48" },
-    { name: "Bilirubin (total)", value: "", unit: "mg/dL", reference_range: "0.1–1.2" },
-    { name: "MCV", value: "", unit: "fL", reference_range: "80–100" },
-];
-
-const BloodTests = () => {
+const Documents = () => {
     const [tests, setTests] = useState([]);
     const [date, setDate] = useState(todayStr());
     const [lab, setLab] = useState("");
     const [notes, setNotes] = useState("");
-    const [markers, setMarkers] = useState(DEFAULT_MARKERS);
+    const [markers, setMarkers] = useState([{ name: "", value: "", unit: "", reference_range: "" }]);
     const [submitting, setSubmitting] = useState(false);
     const [extracting, setExtracting] = useState(false);
 
@@ -56,16 +47,16 @@ const BloodTests = () => {
                     name: m.name || "",
                     value: m.value ?? "",
                     unit: m.unit || "",
-                    reference_range: m.reference_range || "",
+                    reference_range: "",
                 })));
-                toast.success(`Extracted ${found.length} marker${found.length === 1 ? "" : "s"} — review and save`);
+                toast.success(`Transcribed ${found.length} line${found.length === 1 ? "" : "s"} — review before saving`);
             } else {
-                toast.message("We couldn't read markers from that photo", {
-                    description: "Try a clearer, well-lit photo of the results table, or enter the markers manually below.",
+                toast.message("Couldn't read text from that photo", {
+                    description: "Try a clearer, well-lit photo, or type the details below.",
                 });
             }
         } catch (err) {
-            toast.error(err?.response?.data?.detail || err?.message || "Extraction failed");
+            toast.error(err?.response?.data?.detail || err?.message || "Could not scan");
         } finally {
             setExtracting(false);
         }
@@ -76,20 +67,16 @@ const BloodTests = () => {
         setSubmitting(true);
         try {
             const clean = markers
-                .filter((m) => m.name && m.value !== "" && m.value !== null)
+                .filter((m) => m.name)
                 .map((m) => ({
                     name: m.name,
                     value: parseFloat(m.value) || 0,
                     unit: m.unit || "",
-                    reference_range: m.reference_range || "",
+                    reference_range: "",
                 }));
-            if (clean.length === 0) {
-                toast.error("Add at least one marker");
-                return;
-            }
             await api.post("/blood-tests", { date, lab, markers: clean, notes });
-            toast.success("Blood test saved");
-            setMarkers(DEFAULT_MARKERS);
+            toast.success("Document saved to your private journal");
+            setMarkers([{ name: "", value: "", unit: "", reference_range: "" }]);
             setLab("");
             setNotes("");
             await load();
@@ -105,26 +92,24 @@ const BloodTests = () => {
         await load();
     };
 
-    // Build trend data per marker
-    const allMarkerNames = Array.from(new Set(tests.flatMap((t) => (t.markers || []).map((m) => m.name)))).slice(0, 6);
-    const trendData = (name) => tests
-        .slice()
-        .sort((a, b) => a.date.localeCompare(b.date))
-        .map((t) => {
-            const m = (t.markers || []).find((x) => x.name === name);
-            return { date: t.date, value: m ? m.value : null };
-        })
-        .filter((p) => p.value !== null);
-
     return (
-        <div className="max-w-5xl mx-auto fade-up" data-testid="blood-root">
-            <div className="label-eyebrow">Blood tests</div>
-            <h1 className="font-display text-4xl sm:text-5xl font-light tracking-tight mt-1">Watch your liver heal.</h1>
+        <div className="max-w-5xl mx-auto fade-up" data-testid="documents-root">
+            <div className="label-eyebrow">Documents</div>
+            <h1 className="font-display text-4xl sm:text-5xl font-light tracking-tight mt-1">Keep notes for your doctor.</h1>
+            <p className="text-sm text-muted-foreground mt-3 max-w-2xl leading-relaxed">
+                A private place to keep transcriptions of any documents you want to bring up with your doctor — letters, results, notes, blood pressure logs, anything paper. Anchor doesn't interpret these for you. It just helps you store them.
+            </p>
 
-            <Tabs defaultValue="add" className="mt-10">
+            <div className="tactile-card p-4 mt-6 flex gap-3 items-start bg-secondary/30">
+                <FileText className="w-4 h-4 mt-0.5 text-muted-foreground" strokeWidth={1.5} />
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                    <strong>Anchor is not a medical app.</strong> Nothing here is medical advice. Always speak with your doctor about any health information or document.
+                </p>
+            </div>
+
+            <Tabs defaultValue="add" className="mt-8">
                 <TabsList className="rounded-full bg-secondary p-1">
-                    <TabsTrigger value="add" data-testid="tab-add" className="rounded-full px-6">Add result</TabsTrigger>
-                    <TabsTrigger value="trends" data-testid="tab-trends" className="rounded-full px-6">Trends</TabsTrigger>
+                    <TabsTrigger value="add" data-testid="tab-add" className="rounded-full px-6">Add document</TabsTrigger>
                     <TabsTrigger value="history" data-testid="tab-history" className="rounded-full px-6">History</TabsTrigger>
                 </TabsList>
 
@@ -132,19 +117,19 @@ const BloodTests = () => {
                     <form onSubmit={save} className="tactile-card p-6 sm:p-8 space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div>
-                                <label className="label-eyebrow">Date</label>
+                                <label className="label-eyebrow">Date on document</label>
                                 <Input data-testid="blood-date-input" type="date" value={date} onChange={(e) => setDate(e.target.value)} className="mt-1" />
                             </div>
                             <div className="md:col-span-2">
-                                <label className="label-eyebrow">Lab / clinic</label>
-                                <Input data-testid="blood-lab-input" value={lab} onChange={(e) => setLab(e.target.value)} placeholder="optional" className="mt-1" />
+                                <label className="label-eyebrow">Source / issuer</label>
+                                <Input data-testid="blood-lab-input" value={lab} onChange={(e) => setLab(e.target.value)} placeholder="e.g. Letter from Dr Smith, GP visit notes (optional)" className="mt-1" />
                             </div>
                         </div>
 
                         <div>
                             <label className="cursor-pointer inline-flex items-center gap-2 text-sm text-primary font-medium border border-dashed border-primary/50 rounded-2xl px-4 py-3 hover:bg-primary/5 transition-colors" data-testid="blood-extract-label">
                                 {extracting ? <Loader2 className="w-4 h-4 animate-spin" strokeWidth={1.5} /> : <Upload className="w-4 h-4" strokeWidth={1.5} />}
-                                {extracting ? "Extracting…" : "Upload report image (AI will fill the form)"}
+                                {extracting ? "Reading…" : "Scan a document photo (we'll transcribe the text)"}
                                 <input
                                     type="file"
                                     accept="image/*"
@@ -157,18 +142,18 @@ const BloodTests = () => {
 
                         <div>
                             <div className="flex items-center justify-between mb-3">
-                                <div className="label-eyebrow">Markers</div>
+                                <div className="label-eyebrow">Labelled values from the document</div>
                                 <button type="button" onClick={addMarker} data-testid="blood-add-marker" className="text-xs inline-flex items-center gap-1 text-primary">
                                     <Plus className="w-3.5 h-3.5" strokeWidth={1.5} /> Add row
                                 </button>
                             </div>
+                            <p className="text-xs text-muted-foreground mb-3">Optional. Just a place to transcribe lines like "Weight 78 kg" or "Blood pressure 122/78" so you have them for reference.</p>
                             <div className="space-y-2">
                                 {markers.map((m, i) => (
                                     <div key={i} className="grid grid-cols-12 gap-2 items-center" data-testid={`marker-row-${i}`}>
-                                        <Input className="col-span-4" placeholder="Name" value={m.name} onChange={(e) => setMarker(i, "name", e.target.value)} />
+                                        <Input className="col-span-5" placeholder="Label (e.g. Weight)" value={m.name} onChange={(e) => setMarker(i, "name", e.target.value)} />
                                         <Input className="col-span-3" type="number" step="0.01" placeholder="Value" value={m.value} onChange={(e) => setMarker(i, "value", e.target.value)} />
-                                        <Input className="col-span-2" placeholder="Unit" value={m.unit} onChange={(e) => setMarker(i, "unit", e.target.value)} />
-                                        <Input className="col-span-2" placeholder="Range" value={m.reference_range} onChange={(e) => setMarker(i, "reference_range", e.target.value)} />
+                                        <Input className="col-span-3" placeholder="Unit" value={m.unit} onChange={(e) => setMarker(i, "unit", e.target.value)} />
                                         <button type="button" onClick={() => removeMarker(i)} className="text-muted-foreground hover:text-destructive col-span-1 flex justify-center">
                                             <X className="w-4 h-4" strokeWidth={1.5} />
                                         </button>
@@ -178,46 +163,18 @@ const BloodTests = () => {
                         </div>
 
                         <div>
-                            <label className="label-eyebrow">Notes</label>
-                            <Textarea data-testid="blood-notes-input" value={notes} onChange={(e) => setNotes(e.target.value)} className="mt-2 rounded-2xl" />
+                            <label className="label-eyebrow">Your notes</label>
+                            <Textarea data-testid="blood-notes-input" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Anything you want to remember to ask your doctor about this document…" className="mt-2 rounded-2xl" />
                         </div>
 
                         <Button type="submit" disabled={submitting} data-testid="blood-submit-btn" className="rounded-full px-8">
-                            {submitting ? "Saving…" : "Save result"}
+                            {submitting ? "Saving…" : "Save document"}
                         </Button>
                     </form>
                 </TabsContent>
 
-                <TabsContent value="trends" className="mt-6">
-                    {tests.length < 2 && (
-                        <div className="tactile-card p-8 text-sm text-muted-foreground">Add 2+ results to see trends.</div>
-                    )}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                        {allMarkerNames.map((name) => {
-                            const data = trendData(name);
-                            if (data.length < 2) return null;
-                            return (
-                                <div key={name} className="tactile-card p-5" data-testid={`trend-${name}`}>
-                                    <div className="label-eyebrow">{name}</div>
-                                    <div className="h-48 mt-2">
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <LineChart data={data} margin={{ top: 10, right: 10, bottom: 0, left: -16 }}>
-                                                <CartesianGrid stroke="hsl(42 20% 90%)" strokeDasharray="2 4" />
-                                                <XAxis dataKey="date" tick={{ fontSize: 10, fill: "hsl(127 4% 36%)" }} />
-                                                <YAxis tick={{ fontSize: 10, fill: "hsl(127 4% 36%)" }} />
-                                                <Tooltip contentStyle={{ background: "hsl(127 9% 19%)", border: "none", borderRadius: 12, color: "#fff" }} />
-                                                <Line type="monotone" dataKey="value" stroke="hsl(136 18% 35%)" strokeWidth={2} dot={{ r: 3, fill: "hsl(13 54% 55%)" }} />
-                                            </LineChart>
-                                        </ResponsiveContainer>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </TabsContent>
-
                 <TabsContent value="history" className="mt-6 space-y-3">
-                    {tests.length === 0 && <div className="text-sm text-muted-foreground">No results yet.</div>}
+                    {tests.length === 0 && <div className="text-sm text-muted-foreground">No documents yet.</div>}
                     {tests.map((t) => (
                         <div key={t.id} className="tactile-card p-5" data-testid={`blood-row-${t.id}`}>
                             <div className="flex items-start justify-between">
@@ -236,11 +193,10 @@ const BloodTests = () => {
                                     <div key={i} className="text-sm">
                                         <span className="text-muted-foreground">{m.name}:</span>{" "}
                                         <span className="font-medium">{m.value}{m.unit && ` ${m.unit}`}</span>
-                                        {m.reference_range && <span className="text-xs text-muted-foreground"> ({m.reference_range})</span>}
                                     </div>
                                 ))}
                             </div>
-                            {t.notes && <p className="mt-3 text-sm text-muted-foreground">{t.notes}</p>}
+                            {t.notes && <p className="mt-3 text-sm text-muted-foreground whitespace-pre-wrap">{t.notes}</p>}
                         </div>
                     ))}
                 </TabsContent>
@@ -249,4 +205,4 @@ const BloodTests = () => {
     );
 };
 
-export default BloodTests;
+export default Documents;

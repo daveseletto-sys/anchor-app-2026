@@ -3,15 +3,25 @@
 ## Latest Status (2026-02 / June 2026)
 
 ### iOS App Store — Mid-Submission
-- **Web app (production):** Fully working — `https://progress-hub-256.emergent.host`
-- **iOS app:** Native Expo + WebView shell at `/app/mobile/` — Build 5 submitted to Apple (currently "Processing"), Build 6/7 needed because Apple flagged `NSUserTrackingUsageDescription` in plist
-- **Build 7 (in flight):** Queued on EAS free tier, removed tracking key, bumped buildNumber to 6, awaiting cloud build slot
-- **App Store credentials in App Review Information:** ⚠️ Was set to `demo@anchor.app/demo1234` (didn't exist on prod, caused first reviewer to fail login). Now changed to working `tester@anchor.app/Anchor!2026`.
+- **Build 9 SUBMITTED** to Apple (clean, no NSUserTrackingUsageDescription)
+- **Apple rejected with TWO new issues** on 2026-06-02:
+  - 2.1(a) App Completeness — App Store description is too generic (placeholder)
+  - 5.1.1(ix) Privacy: Data Collection — "Individual" account cannot submit apps handling sensitive medical data. Must be enrolled as Organization OR remove medical framing.
+- **User's decision: Path B — strip medical framing.**
 
-### Recent Fixes (2026-02)
-- **Blood Test & Food Label scanners now accept any image format** — fixed `BloodTests.jsx` and `FoodLabelReader.jsx` to accept `image/*` (was restricted to JPG/PNG/WEBP), added `imageFileToJpegBase64()` helper in `api.js` that converts HEIC/HEIF → JPEG client-side. Addresses Apple Guideline 2.1(a) rejection.
-- **Profile → Delete account UI** restored (JSX was missing despite handler existing). Required for Apple 5.1.1(v).
-- **Created entire Expo iOS app** at `/app/mobile/` with native splash, native crisis-call FAB (region-aware), offline detection, haptics, WebView wrapper pointing at production URL. Submitted as Build 5.
+### Medical-framing strip-out (2026-06-02) — IN PROGRESS
+- Backend `analyze_blood_test` LLM prompt rewritten to be a generic document OCR (no medical interpretation, returns labelled-value transcription only, never returns reference_range).
+- Backend `MEDICAL_DISCLAIMER` reworded to "personal wellness journal, not a medical app".
+- Frontend `BloodTests.jsx` rewritten as `Documents` page: removed preset medical markers (ALT/AST/GGT/etc), removed reference_range UI, removed Trends tab, removed "watch your liver heal" framing. New page is "Keep notes for your doctor" with explicit non-medical disclaimer card.
+- Sidebar (`AppShell.jsx`) renamed "Blood Tests" → "Documents".
+- Updated copy on Landing, Privacy, Support, Profile, Glossary, Sources pages — removed "blood test", "liver markers", "ALT/AST/GGT", "liver healing" language; reframed as general wellness journal.
+- The route `/app/blood` is preserved (same MongoDB collection `blood_tests` is reused — UI just renders it generically).
+- **Still TODO:** Bump iOS build number to 10, rebuild via EAS, submit; also fix App Store description copy.
+
+### Earlier Fixes (2026-02)
+- Blood Test & Food Label scanners now accept any image format (HEIC fix).
+- Profile → Delete account UI restored.
+- Created entire Expo iOS app at `/app/mobile/`.
 
 ## Original Problem Statement
 "build me an app for alcoholics to monitor there progress diet, blood test results, food label reader, weekly goals, daily diary on progress with a daily rating on how they have done for the day min protein intake 140mg daily no more than 2mg salt no more than 1.5 litres of water a day. glossary of terms inc"

@@ -79,10 +79,10 @@ const Glossary = () => {
 
             <div className="mt-12 pt-6 border-t border-border">
                 <Link to="/sources" className="text-sm text-primary hover:underline inline-flex items-center gap-1" data-testid="glossary-all-sources-link">
-                    View all medical sources <ExternalLink className="w-3 h-3" strokeWidth={1.5} />
+                    View reference sources <ExternalLink className="w-3 h-3" strokeWidth={1.5} />
                 </Link>
                 <p className="text-xs text-muted-foreground mt-2 max-w-xl">
-                    Anchor is a self-tracking tool — not a substitute for medical advice. Always consult a qualified clinician about your personal health.
+                    Anchor is a personal wellness journal — not a medical app and not a substitute for medical advice. The glossary below points to publicly available information so you can read more if you're curious. Always speak with your own doctor about your personal health.
                 </p>
             </div>
         </div>

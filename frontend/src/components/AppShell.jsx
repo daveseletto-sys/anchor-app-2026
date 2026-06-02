@@ -8,7 +8,7 @@ const NAV = [
     { to: "/app/diary", label: "Daily Diary", icon: BookOpen },
     { to: "/app/diet", label: "Diet Tracker", icon: UtensilsCrossed },
     { to: "/app/food-label", label: "Food Label", icon: Camera },
-    { to: "/app/blood", label: "Blood Tests", icon: Activity },
+    { to: "/app/blood", label: "Documents", icon: Activity },
     { to: "/app/meds", label: "Medications", icon: Pill },
     { to: "/app/goals", label: "Weekly Goals", icon: Target },
     { to: "/app/milestones", label: "Milestones", icon: Award },
